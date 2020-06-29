@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Genealogger</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
+    </head>
+    <body>
+                <a href="./">home</a>
+    <form deer-type="Person" id="personDetail" deer-context="http://schema.org">
+        <input type="hidden" deer-key="targetCollection" value="Genealogger-085522">
+        <input type="hidden" deer-key="creator" value="cubap">
+        <label>Display Name: <input type="text" deer-key="name" tabindex="1"></label>
+       <input type="submit" value="+">
+    </form>
+                <div id="adding" style="display: none;">
+        <a class="person-detail" href="birth.html?person=">Add Birth</a>
+        <a class="person-detail">Add Residence</a>
+        <a class="person-detail">Add Occupation</a>
+        <a class="person-detail">Add Marriage</a>
+        <a class="person-detail" href="birth.html?parent=">Add Child</a>
+        <a class="person-detail" href="death.html?person=">Add Death</a>
+        <a class="person-detail">Add Depiction</a>
+                </div>
+    <script src="js/deer.js" type="module"></script>
+    <script>
+        window.onhashchange = window.onload = () => {
+            let personID = window.location.hash.substr(1)
+            personDetail.setAttribute("deer-id", personID)
+            ;[...document.querySelectorAll('.person-detail')].forEach(el=>el.href+=personID)
+            if (personID) {
+                adding.style.display = "block"
+            }
+        }
+    </script>
+</body>
+</html>

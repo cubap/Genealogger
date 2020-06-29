@@ -1,0 +1,7 @@
+/* 
+    Created on : Jun 25, 2020, 8:25:34 AM
+    Author     : cubap
+*/
+label, .person-detail {
+    display: grid;
+}

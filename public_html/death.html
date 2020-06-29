@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Genealogger</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
+    </head>
+    <body>
+        <a href="./">home</a>
+        <h3><deer-view id="personBanner" deer-template="label" deer-key="name">Label</deer-view></h3>
+        <p>
+            Add or modify death records for a person.
+        </p>
+        <form deer-type="Death" id="deathDetail" deer-context="http://schema.org">
+        <input type="hidden" deer-key="hasAgent" id="personDetail">
+            <input type="hidden" deer-key="creator" value="cubap">
+            <p>Evidence</p>
+            <label>Place of Death: <input type="text" deer-key="deathPlace" tabindex="1"></label>
+            <label>Date of Death: <input id="deathDate" type="date" deer-key="deathDate" tabindex="1"></label>
+            <input type="submit" value="+">
+        </form>
+        <a class="person-detail" id="graveLink" href="grave.html">Grave</a>
+        <!--http://rdf.muninn-project.org/ontologies/graves.html#term_hasLocation-->
+                <a class="person-detail" href="birth.html?person=">Add Birth</a>
+
+        <script src="js/deer.js" type="module"></script>   
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                let params = new URLSearchParams(location.search)
+                let personID = params.get("person")
+                if (!personID) {
+                    let message = "This interface requires a 'person' parameter which was missing. Redirecting to main page."
+                    alert(message)
+                    location.href = "./index.html"
+                }
+            personDetail.value = personID
+                personBanner.setAttribute("deer-id", personID)
+            })
+            deathDate.addEventListener("input", (e) => {
+                let query = new URLSearchParams()
+                query.set("deathDate", e.target.value)
+                query.set("isRemainsOf", personBanner.getAttribute("deer-id"))
+                graveLink.setAttribute("href","grave.html?"+query.toString())
+            })
+        </script>
+        <script>
+        window.onhashchange = () => {
+            let deathID = window.location.hash.substr(1)
+            deathDetail.setAttribute("deer-id", deathID)
+        }
+    </script>
+    </body>
+</html>

@@ -1,0 +1,24 @@
+{
+    "elements": {
+        "deer-view": {
+            "attributes": {
+                "deer-link": {},
+                "style": {},
+                "deer-template": {}
+            }
+        }
+    },
+    "attributes": {
+        "deer-key": {
+            "context": "input"
+        },
+        "deer-collection": {},
+        "name": {
+            "context": "link"
+        },
+        "deer-type": {
+            "context": "form"
+        },
+        "id": {}
+    }
+}
