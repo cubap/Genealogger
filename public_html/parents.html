@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Genealogger</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
+        <style>
+            [deer-id]::before {
+                display:grid;
+                content:attr(deer-id);
+                text-align: right;
+                opacity: .7;
+                font-size: .78rem;
+            }
+        </style>
+    </head>
+    <body>
+        <a href="./">home</a>
+        <h3 class="deer-view" id="personBanner" deer-template="label" deer-key="name">[ new person ]</h3>
+        <p>
+            Quickly add a parent for this person.
+        </p>
+        <form deer-type="Person" deer-context="http://schema.org" id="parentDetail" deer-motivation="describing" deer-creator="cubap">
+            <button role="button" onclick="newPerson('dadID')">Add a new father</button>
+            <select class="personDropdown"></select>
+            <label>Father: <input id="dadID" type="text" deer-key="hasFather"></label>
+            <button role="button" onclick="newPerson('momID')">Add a new mother</button>
+            <select class="personDropdown"></select>
+            <label>Mother: <input id="momID" type="text" deer-key="hasMother"></label>
+            <label>Residence: <input id="homeID" type="text" deer-key="homeLocation"></label>
+            <input type="submit" value="set person details">
+        </form>
+    <deer-view deer-collection="Genealogger-085522" id="allFolks" style="visibility:hidden;">loading...</deer-view>
+    <script src="js/deer.js" type="module"></script>   
+    <script>
+        function newPerson(elem) {
+            let label = prompt("Enter a name:")
+            let person = {
+                "@type": "Person",
+                name: label
+            }
+            fetch("http://tinydev.rerum.io/app/create", {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(person)
+            }).then(response=>response.json()).then(newPerson => {
+                // rerum_server #126
+//                let id = response.headers.get('Location')
+let id = newPerson.new_obj_state['@id']
+                window[elem].value = id
+                let collection = {
+                    "@type": "Annotation",
+                    target: id,
+                    body: {
+                        targetCollection: "Genealogger-085522"
+                    }
+                }
+                fetch("http://tinydev.rerum.io/app/create", {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(collection)
+                })
+            })
+        }
+        function updatePersonInput(event) {
+            let elem = event.target
+            let inputElem = elem.nextElementSibling.children[0]
+            inputElem.value = elem.value
+            inputElem.$isDirty = true
+        }
+        function populatePersonInputs() {
+            let inputElems = Array.from(document.querySelectorAll(".personDropdown"))
+            let liElems = Array.from(allFolks.getElementsByTagName("li"))
+            inputElems.map(elem => {
+                let dropdown = `<option>Select Person</option>\n`
+                for (const li of liElems) {
+                    dropdown += `<option value="${li.getAttribute("deer-id")}"> ${li.textContent} </option>\n`
+                }
+                elem.innerHTML = dropdown
+                elem.oninput = updatePersonInput
+            })
+        }
+        document.addEventListener("DOMContentLoaded", function () {
+            let params = new URLSearchParams(window.location.search)
+            let personID = window.location.hash.substr(1)
+            dadID.value = params.get("father")
+            momID.value = params.get("mother")
+            let parentID = params.get("parent")
+            if (parentID) {
+                let query = {
+                    "__rerum.history.next": {"$exists": true, "$size": 0},
+                    "body.gender": {"$exists": true},
+                    target: parentID
+                }
+                fetch("http://tinydev.rerum.io/app/query", {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(query)
+                }).then(response => response.json())
+                        .catch(() => ([]))
+                        .then(genders => {
+                            if (genders.length === 0) {
+                                dadID.value = parentID
+                            } else {
+                                // Just take the first assertion for now
+                                let gender = UTILS.getValue(genders[0].body.gender)
+                                if ((/female/i).test(gender)) {
+                                    momID.value = parentID
+                                } else if ((/male/i).test(gender)) {
+                                    dadID.value = parentID
+                                }
+                            }
+                        })
+            }
+            if (personID) {
+                personBanner.setAttribute("deer-id", personID)
+                parentDetail.setAttribute("deer-id", personID)
+            }
+        });
+        document.addEventListener("deer-view-rendered", event => {
+            if (event.target.id === "allFolks") {
+                populatePersonInputs()
+            }
+        })
+        window.onhashchange = () => {
+            let personID = window.location.hash.substr(1)
+            parentDetail.setAttribute("deer-id", personID)
+            personBanner.setAttribute("deer-id", personID)
+
+        }
+    </script>
+</body>
+</html>

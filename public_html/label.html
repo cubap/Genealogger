@@ -13,11 +13,14 @@ and open the template in the editor.
     </head>
     <body>
                 <a href="./">home</a>
-    <deer-view id='personDetail' deer-template="entity">
-        <p>No person is selected. <a href="./">View list</a></p>
-    </deer-view>
-    <div id="adding" style="display: none;">
-        <a class="person-detail" href="tree.html#">View Family Tree</a>
+    <form deer-type="Person" id="personDetail" deer-context="http://schema.org">
+        <input type="hidden" deer-key="targetCollection" value="Genealogger-085522">
+        <input type="hidden" deer-key="creator" value="cubap">
+        <label>Display Name: <input type="text" deer-key="name" tabindex="1"></label>
+       <input type="submit" value="+">
+    </form>
+                <div id="adding" style="display: none;">
+        <a class="person-detail" href="person.html#">View profile</a>
         <a class="person-detail" href="birth.html?person=">Add Birth</a>
         <a class="person-detail">Add Residence</a>
         <a class="person-detail">Add Occupation</a>
@@ -25,7 +28,7 @@ and open the template in the editor.
         <a class="person-detail" href="birth.html?parent=">Add Child</a>
         <a class="person-detail" href="death.html?person=">Add Death</a>
         <a class="person-detail">Add Depiction</a>
-    </div>
+                </div>
     <script src="js/deer.js" type="module"></script>
     <script>
         window.onhashchange = window.onload = () => {

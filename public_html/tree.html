@@ -10,13 +10,13 @@ and open the template in the editor.
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
-        
     </head>
     <body>
         <a href="./">home</a>
         <h3><deer-view id="personBanner" deer-template="label" deer-key="name">Label</deer-view></h3>
+    <deer-view id="childrenList" deer-template="childrenList"></deer-view>
         <p>
-            View tree for person.
+            View tree for person. <a href="javascript:location='?showall=true'+location.hash;">showall</a>
         </p>
 
     <deer-view deer-template="tree" id="treeDetail">Loading tree</deer-view>
@@ -25,14 +25,6 @@ and open the template in the editor.
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             let params = new URLSearchParams(location.search)
-            let personID = params.get("person")
-//            if (!personID) {
-//                let message = "This interface requires a 'person' parameter which was missing. Redirecting to main page."
-//                alert(message)
-//                location.href = "./index.html"
-//            }
-//            personDetail.value = personID
-//            personBanner.setAttribute("deer-id", personID)
             window.onhashchange()
         })
     </script>
@@ -41,6 +33,7 @@ and open the template in the editor.
             let personID = window.location.hash.substr(1)
             treeDetail.setAttribute("deer-id", personID)
             personBanner.setAttribute("deer-id", personID)
+            childrenList.setAttribute("deer-id", personID)
         }
     </script>
 </body>
