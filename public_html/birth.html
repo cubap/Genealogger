@@ -18,6 +18,15 @@ and open the template in the editor.
                 opacity: .7;
                 font-size: .78rem;
             }
+            form {
+                padding: 1em 0;
+                width: 40em;
+                max-width: 98vw;
+                margin: 0 auto;
+            }
+            .personDropdown {
+                float: right;
+            }
         </style>
     </head>
     <body>
@@ -179,8 +188,9 @@ and open the template in the editor.
             window.onhashchange = () => {
                 let birthID = window.location.hash.substr(1)
                 birthDetail.setAttribute("deer-id", birthID)
-
+                if(birthID.length<1) alert("No hash for person to be born!")
             }
+            if(!location.hash) alert("No hash for person to be born!")
         </script>
     </body>
 </html>
