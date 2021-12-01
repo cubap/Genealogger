@@ -5,16 +5,19 @@ To change this template file, choose Tools | Templates
 and open the template in the editor.
 -->
 <html>
-    <head>
-        <title>Genealogger</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
-    </head>
-    <body>
-                <a href="./">home</a>
+
+<head>
+    <title>Genealogger</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
+</head>
+
+<body>
+    <a href="./">home</a>
     <deer-view id='personDetail' deer-template="entity">
-        <p>No person is selected. <a href="./">View list</a></p>
+        <p>No person is selected. <a href="./">View list</a>, add a parent on the family tree or just add someone below.</p>
+        <button role="button" id="namePerson" onclick="newPerson('dadID')">Add a new person</button>
     </deer-view>
     <div id="adding" style="display: none;">
         <a class="person-detail" href="tree.html#">View Family Tree</a>
@@ -30,12 +33,48 @@ and open the template in the editor.
     <script>
         window.onhashchange = window.onload = () => {
             let personID = window.location.hash.substr(1)
-            personDetail.setAttribute("deer-id", personID)
-            ;[...document.querySelectorAll('.person-detail')].forEach(el=>el.href+=personID)
             if (personID) {
+                personDetail.setAttribute("deer-id", personID)
+                    ;[...document.querySelectorAll('.person-detail')].forEach(el => el.href += personID)
                 adding.style.display = "block"
             }
         }
+
+        function newPerson() {
+            let label = prompt("Enter a name:")
+            let person = {
+                "@type": "Person",
+                name: label
+            }
+            fetch("http://tinydev.rerum.io/app/create", {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(person)
+            }).then(response => response.json()).then(newPerson => {
+                // rerum_server #126
+                // let id = response.headers.get('Location')
+                let id = newPerson.new_obj_state['@id']
+                let collection = {
+                    "@type": "Annotation",
+                    target: id,
+                    body: {
+                        targetCollection: "Genealogger-085522"
+                    }
+                }
+                fetch("http://tinydev.rerum.io/app/create", {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(collection)
+                }).then(res=>{if(res.ok){location=`#${id}`}})
+            })
+        }
     </script>
 </body>
+
 </html>
