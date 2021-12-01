@@ -124,15 +124,15 @@ and open the template in the editor.
                                     }
                                 }
                             })
-                }
-                if (personID) {
-                    personDetail.value = personID
-                    personBanner.setAttribute("deer-id", personID)
-                    parentDetail.setAttribute("deer-id", personID)
-                }
-                if (birthID) {
-                    birthDetail.setAttribute("deer-id", birthID)
-                } else if (personID) {
+                        }
+                        if (personID) {
+                            personDetail.value = personID
+                            personBanner.setAttribute("deer-id", personID)
+                            parentDetail.setAttribute("deer-id", personID)
+                        }
+                        if (birthID) {
+                            birthDetail.setAttribute("deer-id", birthID)
+                        } else if (personID) {
                     let query = {
                         "__rerum.history.next": {"$exists": true, "$size": 0},
                         "body.hasAgent.value": personID
@@ -190,7 +190,6 @@ and open the template in the editor.
                 birthDetail.setAttribute("deer-id", birthID)
                 if(birthID.length<1) alert("No hash for person to be born!")
             }
-            if(!location.hash) alert("No hash for person to be born!")
         </script>
     </body>
 </html>
