@@ -16,7 +16,7 @@
 import { default as UTILS } from './deer-utils.js'
 import { default as config } from './deer-config.js'
 
-        const changeLoader = new MutationObserver(renderChange)
+const changeLoader = new MutationObserver(renderChange)
 var DEER = config
 
 /**
@@ -90,10 +90,10 @@ RENDER.element = function (elem, obj) {
             let newViews = (elem.querySelectorAll(config.VIEW).length) ? elem.querySelectorAll(config.VIEW) : []
             let newForms = (elem.querySelectorAll(config.FORM).length) ? elem.querySelectorAll(config.VIEW) : []
             if (newForms.length) {
-                UTILS.broadcast(undefined, DEER.EVENTS.NEW_FORM, elem, {set: newForms})
+                UTILS.broadcast(undefined, DEER.EVENTS.NEW_FORM, elem, { set: newForms })
             }
             if (newViews.length) {
-                UTILS.broadcast(undefined, DEER.EVENTS.NEW_VIEW, elem, {set: newViews})
+                UTILS.broadcast(undefined, DEER.EVENTS.NEW_VIEW, elem, { set: newViews })
             }
             UTILS.broadcast(undefined, DEER.EVENTS.VIEW_RENDERED, elem, obj)
         }, 0)
@@ -122,7 +122,7 @@ DEER.TEMPLATES.json = function (obj, options = {}) {
         return `<pre>${JSON.stringify(obj, replacer, indent)}</pre>`
     } catch (err) {
         return null
-}
+    }
 }
 
 /**
@@ -139,7 +139,7 @@ DEER.TEMPLATES.prop = function (obj, options = {}) {
         return `<span class="${prop}">${label}: ${UTILS.getValue(prop) || "[ undefined ]"}</span>`
     } catch (err) {
         return null
-}
+    }
 }
 
 /**
@@ -156,7 +156,7 @@ DEER.TEMPLATES.label = function (obj, options = {}) {
         return options.link ? `<a href="${options.link + obj['@id']}">${label}</a>` : `${label}`
     } catch (err) {
         return null
-}
+    }
 }
 
 /**
@@ -236,8 +236,8 @@ DEER.TEMPLATES.list = function (obj, options = {}) {
 DEER.TEMPLATES.person = function (obj, options = {}) {
     try {
         let tmpl = `<h2>${UTILS.getLabel(obj)}</h2>`
-        let dob = DEER.TEMPLATES.prop(obj, {key: "birthDate", label: "Birth Date"}) || ``
-        let dod = DEER.TEMPLATES.prop(obj, {key: "deathDate", label: "Death Date"}) || ``
+        let dob = DEER.TEMPLATES.prop(obj, { key: "birthDate", label: "Birth Date" }) || ``
+        let dod = DEER.TEMPLATES.prop(obj, { key: "deathDate", label: "Death Date" }) || ``
         let famName = (obj.familyName && UTILS.getValue(obj.familyName)) || "[ unknown ]"
         let givenName = (obj.givenName && UTILS.getValue(obj.givenName)) || ""
         tmpl += (obj.familyName || obj.givenName) ? `<div>Name: ${famName}, ${givenName}</div>` : ``
@@ -267,11 +267,11 @@ DEER.TEMPLATES.childrenList = function (obj, options = {}) {
     function getChildren() {
         let query = {
             $or: [{
-                    "body.hasFather.value": obj["@id"]
-                }, {
-                    "body.hasMother.value": obj["@id"]
-                }],
-            "__rerum.history.next": {"$exists": true, "$size": 0}
+                "body.hasFather.value": obj["@id"]
+            }, {
+                "body.hasMother.value": obj["@id"]
+            }],
+            "__rerum.history.next": { "$exists": true, "$size": 0 }
         }
         return fetch("http://tinydev.rerum.io/app/query", {
             method: 'POST',
@@ -281,8 +281,8 @@ DEER.TEMPLATES.childrenList = function (obj, options = {}) {
             },
             body: JSON.stringify(query)
         }).then(response => response.json())
-                .catch(() => ([]))
-                .then(annos => annos.map(a => UTILS.getValue(a.target)))
+            .catch(() => ([]))
+            .then(annos => annos.map(a => UTILS.getValue(a.target)))
     }
     try {
         return {
@@ -290,12 +290,12 @@ DEER.TEMPLATES.childrenList = function (obj, options = {}) {
         </ul>`,
             then: (elem, object, options) => getChildren().then(kIDs => elem.innerHTML = kIDs.length ? `<ul>Offspring
         ${kIDs.reduce((b, a) => b += `<li><deer-view deer-id="${a}" deer-template="label" deer-link="#" title="Click to view"></deer-view></li>`, ``)}
-        </ul>` : `[ no child records ]`).then(() => setTimeout(UTILS.broadcast(undefined, DEER.EVENTS.NEW_VIEW, elem, {set: elem.querySelectorAll("[deer-template]")}), 0))
+        </ul>` : `[ no child records ]`).then(() => setTimeout(UTILS.broadcast(undefined, DEER.EVENTS.NEW_VIEW, elem, { set: elem.querySelectorAll("[deer-template]") }), 0))
         }
 
     } catch (err) {
         return null
-}
+    }
 }
 
 
@@ -307,7 +307,7 @@ DEER.TEMPLATES.tree = function (obj, options = {}) {
     }
     try {
         let tmpl =
-                `<style>
+            `<style>
             .tree-detail {
                 display: flex;
                 align-items: center;
@@ -332,10 +332,10 @@ DEER.TEMPLATES.tree = function (obj, options = {}) {
             }
         </style>
         <div class="tree-detail">
-        <a href="#${obj["@id"]}" title="Click to View">${UTILS.getLabel(obj)}</a>
+        <a href="#${obj["@id"]}" title="Click to View"><deer-view deer-template="personDates" deer-id="${obj['@id']}">${UTILS.getLabel(obj)}</deer-view></a>
         <div class="parents">
-            ${(obj.hasFather) ? `<div class="deer-view" deer-template="tree" ${options.config.showall ? `deer-id` : `data-uri`}="${UTILS.getValue(obj.hasFather)}">Show father</div>` : `<div class="void-parent">[ <a href="parents.html?#${obj['@id']}">add father</a> ]</div>` }    
-            ${(obj.hasMother) ? `<div class="deer-view" deer-template="tree" ${options.config.showall ? `deer-id` : `data-uri`}="${UTILS.getValue(obj.hasMother)}">Show mother</div>` : `<div class="void-parent">[ <a href="parents.html?#${obj['@id']}">add mother</a> ]</div>` }    
+            ${(obj.hasFather) ? `<div class="deer-view" deer-template="tree" ${options.config.showall ? `deer-id` : `data-uri`}="${UTILS.getValue(obj.hasFather)}">Show father</div>` : `<div class="void-parent">[ <a href="parents.html?#${obj['@id']}">add father</a> ]</div>`}    
+            ${(obj.hasMother) ? `<div class="deer-view" deer-template="tree" ${options.config.showall ? `deer-id` : `data-uri`}="${UTILS.getValue(obj.hasMother)}">Show mother</div>` : `<div class="void-parent">[ <a href="parents.html?#${obj['@id']}">add mother</a> ]</div>`}    
         </div>
         </div>
 `
@@ -345,14 +345,14 @@ DEER.TEMPLATES.tree = function (obj, options = {}) {
         }
     } catch (err) {
         return null
-}
+    }
 }
 
 DEER.TEMPLATES.personDates = function (obj, options = {}) {
     try {
         function findEvents(additionalTypes = ["Birth", "Death"]) {
             let query = {
-                "__rerum.history.next": {"$exists": true, "$size": 0},
+                "__rerum.history.next": { "$exists": true, "$size": 0 },
                 "body.hasAgent.value": obj["@id"]
             }
             let dates = []
@@ -364,23 +364,25 @@ DEER.TEMPLATES.personDates = function (obj, options = {}) {
                 },
                 body: JSON.stringify(query)
             }).then(response => response.json())
-                    .catch(() => ([]))
-                    .then(e => {
+                .catch(() => ([]))
+                .then(e => {
+                    return Promise.all(
                         e.map(ev => UTILS.expand(ev.target).then(date => {
-                                if (date.additionalType && additionalTypes.includes(date.additionalType.value)) {
-                                    dates.push(date)
-                                }
-                            }))
-                    })
-                    .then(() => dates)
+                            if (date.additionalType && additionalTypes.includes(date.additionalType.value)) {
+                                dates.push(date)
+                            }
+                        }))
+                    )
+                })
+                .then(() => dates)
         }
         let tmpl = {
             html: UTILS.getLabel(obj),
             then: (elem, item, opts) => {
                 findEvents().then(dates => {
                     elem.innerHTML = (dates.length)
-                            ? dates.reduce((a, b) => a += `<span gl-birthdate="${UTILS.getValue(b.birthDate)}" gl-deathdate="${UTILS.getValue(b.deathDate)}">${UTILS.getLabel(item)}</span>`, ``)
-                            : `<span>${UTILS.getLabel(item)}</span>`
+                        ? dates.reduce((a, b) => a += `<span gl-birthdate="${UTILS.getValue(b.birthDate)}" gl-deathdate="${UTILS.getValue(b.deathDate)}">${UTILS.getLabel(item)} <br>(${UTILS.getValue(b.birthDate)?.toString() ?? "?"}—${UTILS.getValue(b.deathDate)?.toString() ?? "?"})</span>`, ``)
+                        : `<span>${UTILS.getLabel(item)}</span>`
                 })
             }
         }
@@ -433,13 +435,13 @@ export default class DeerRender {
                 } else if (this.collection) {
                     // Look not only for direct objects, but also collection annotations
                     // Only the most recent, do not consider history parent or children history nodes
-                    let historyWildcard = {"$exists": true, "$size": 0}
+                    let historyWildcard = { "$exists": true, "$size": 0 }
                     let queryObj = {
                         $or: [{
-                                "targetCollection": this.collection
-                            }, {
-                                "body.targetCollection": this.collection
-                            }],
+                            "targetCollection": this.collection
+                        }, {
+                            "body.targetCollection": this.collection
+                        }],
                         "__rerum.history.next": historyWildcard
                     }
                     fetch(DEER.URLS.QUERY, {
@@ -447,25 +449,25 @@ export default class DeerRender {
                         mode: "cors",
                         body: JSON.stringify(queryObj)
                     }).then(response => response.json())
-                            .then(pointers => {
-                                let list = []
-                                pointers.map(tc => list.push(fetch(tc.target || tc["@id"] || tc.id).then(response => response.json().catch(err => {
-                                            __deleted: console.log(err)
-                                        }))))
-                                return Promise.all(list).then(l => l.filter(i => !i.hasOwnProperty("__deleted")))
-                            })
-                            .then(list => {
-                                let listObj = {
-                                    name: this.collection,
-                                    itemListElement: list
-                                }
-                                this.elem.setAttribute(DEER.LIST, "itemListElement")
-                                try {
-                                    listObj["@type"] = list[0]["@type"] || list[0].type || "ItemList"
-                                } catch (err) {
-                                }
-                                RENDER.element(this.elem, listObj)
-                            })
+                        .then(pointers => {
+                            let list = []
+                            pointers.map(tc => list.push(fetch(tc.target || tc["@id"] || tc.id).then(response => response.json().catch(err => {
+                                __deleted: console.log(err)
+                            }))))
+                            return Promise.all(list).then(l => l.filter(i => !i.hasOwnProperty("__deleted")))
+                        })
+                        .then(list => {
+                            let listObj = {
+                                name: this.collection,
+                                itemListElement: list
+                            }
+                            this.elem.setAttribute(DEER.LIST, "itemListElement")
+                            try {
+                                listObj["@type"] = list[0]["@type"] || list[0].type || "ItemList"
+                            } catch (err) {
+                            }
+                            RENDER.element(this.elem, listObj)
+                        })
                 }
             }
         } catch (err) {
@@ -491,7 +493,7 @@ export default class DeerRender {
             } catch (err) {
                 console.error("There is no HTML element with id " + listensTo + " to attach an event to")
             }
-    }
+        }
 
     }
 }
