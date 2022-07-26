@@ -316,6 +316,10 @@ DEER.TEMPLATES.tree = function (obj, options = {}) {
                 white-space: nowrap;
                 overflow: visible;
                 margin-bottom: 1rem;
+            }           
+            .tree-detail a {
+                display: inline-block;
+                min-width: 10em;
             }
             .parents {
                 flex-direction: column;
