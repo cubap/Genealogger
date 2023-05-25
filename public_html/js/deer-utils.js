@@ -280,7 +280,7 @@ export default {
      * @param [String] targetStyle other formats of resource targeting.  May be null
      */
     findByTargetId: async function (id, targetStyle = []) {
-        let everything = Object.keys(localStorage).map(k => JSON.parse(localStorage.getItem(k)))
+        let everything = Object.keys(localStorage).filter(entry=>entry.startsWith("http")).map(k => JSON.parse(localStorage.getItem(k)))
         if (!Array.isArray(targetStyle)) {
             targetStyle = [targetStyle]
         }
