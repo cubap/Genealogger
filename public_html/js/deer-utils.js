@@ -21,6 +21,10 @@ export default {
         }
         return fetch(DEER.URLS.QUERY, {
             method: "POST",
+            mode: "cors",
+            headers: new Headers({
+                'Content-Type': 'application/json; charset=utf-8'
+            }),
             body: JSON.stringify(queryObj)
         }).then(response => response.json())
             .then(function (pointers) {
@@ -294,10 +298,11 @@ export default {
         }
         let matches = await fetch(DEER.URLS.QUERY, {
             method: "POST",
-            body: JSON.stringify(obj),
-            headers: {
-                "Content-Type": "application/json"
-            }
+            mode: "cors",
+            headers: new Headers({
+                'Content-Type': 'application/json; charset=utf-8'
+            }),
+            body: JSON.stringify(obj)
         })
             .then(response => response.json())
             .catch((err) => console.error(err))
