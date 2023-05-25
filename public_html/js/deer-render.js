@@ -448,7 +448,7 @@ export default class DeerRender {
                         }],
                         "__rerum.history.next": historyWildcard
                     }
-                    fetch(DEER.URLS.QUERY, {
+                    fetch(DEER.URLS.QUERY+'?limit=100', {
                         method: "POST",
                         mode: "cors",
                         headers: new Headers({
