@@ -12,6 +12,10 @@
 
 import { default as DEER } from './deer-config.js'
 
+const httpsIdLinks = (id)=> {
+    return [ id.replace(/^https?:/,'https:'), id.replace(/^https?:/,'http:') ]
+}
+
 export default {
     listFromCollection: function (collectionId) {
         let queryObj = {
@@ -37,12 +41,10 @@ export default {
             })
     },
 
-    httpsIdLinks:(id)=> {
-        return [ id.replace(/^https?:/,'https:'), id.replace(/^https?:/,'http:') ]
-    },
+    httpsIdLinks,
     
     httpsQueryArray:(id)=> {
-        return { $in: this.httpsIdLinks(id) }
+        return { $in: httpsIdLinks(id) }
     },
 
     getValue: function (property, alsoPeek = [], asType) {
