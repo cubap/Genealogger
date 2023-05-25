@@ -371,7 +371,7 @@ DEER.TEMPLATES.personDates = function (obj, options = {}) {
                 .catch(() => ([]))
                 .then(e => {
                     return Promise.all(
-                        e.map(ev => UTILS.expand(ev.target).then(date => {
+                        e.filter(_e=>Boolean(_e?.target)).map(ev => UTILS.expand(ev.target).then(date => {
                             if (date.additionalType && additionalTypes.includes(date.additionalType.value)) {
                                 dates.push(date)
                             }
