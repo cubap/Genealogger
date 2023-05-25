@@ -29,7 +29,7 @@ export default {
         }).then(response => response.json())
             .then(function (pointers) {
                 let list = []
-                pointers.map(tc => list.push(fetch(tc.target).then(response => response.json())))
+                pointers.map(tc => list.push(fetch(tc.target?.replace(/https?:/,'https:')).then(response => response.json())))
                 return Promise.all(list)
             })
             .then(function (list) {
@@ -125,7 +125,7 @@ export default {
      */
     async expand(entity, matchOn = ["__rerum.generatedBy", "creator"]) {
         let UTILS = this
-        let findId = entity["@id"] || entity.id || entity
+        let findId = (entity["@id"] || entity.id || entity)?.replace(/https?:/,'https:')
         if (typeof findId !== "string") {
             UTILS.warning("Unable to find URI in object:", entity)
             return entity

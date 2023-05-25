@@ -24,7 +24,7 @@ async function renderChange(mutationsList) {
     for (var mutation of mutationsList) {
         switch (mutation.attributeName) {
             case DEER.ID:
-                let id = mutation.target.getAttribute(DEER.ID)
+                let id = mutation.target.getAttribute(DEER.ID)?.replace(/https?:/,'https:')
                 if (id === "null") return
                 let obj = {}
                 try {
@@ -285,17 +285,17 @@ export default class DeerReport {
                 return flatKeys.indexOf(el.getAttribute(DEER.KEY)) === i
             })
                 .map(input => {
-                    let inputId = input.getAttribute(DEER.SOURCE)
+                    let inputId = input.getAttribute(DEER.SOURCE)?.replace(/https?:/,'https:')
                     let creatorId = input.getAttribute(DEER.ATTRIBUTION) || this.attribution
                     let motivation = input.getAttribute(DEER.MOTIVATION) || this.motivation
                     let evidence = input.getAttribute(DEER.EVIDENCE) || this.evidence
                     let action = (inputId) ? "UPDATE" : "CREATE"
                     let annotation = {
                         type: "Annotation",
-                        target: entity["@id"],
+                        target: entity["@id"]?.replace(/https?:/,'https:'),
                         body: {}
                     }
-                    if(creatorId) { annotation.creator = creatorId }
+                    if(creatorId) { annotation.creator = creatorId?.replace(/https?:/,'https:') }
                     if(motivation) { annotation.motivation = motivation }
                     if(evidence) { annotation.evidence = evidence }
                     let delim = (input.hasAttribute(DEER.ARRAYDELIMETER)) ? input.getAttribute(DEER.ARRAYDELIMETER) : (DEER.DELIMETERDEFAULT) ? DEER.DELIMETERDEFAULT : ","
