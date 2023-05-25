@@ -25,10 +25,10 @@ export default {
 
     URLS: {
         BASE_ID: "http://devstore.rerum.io/v1",
-        CREATE: "http://tinydev.rerum.io/app/create",
-        UPDATE: "http://tinydev.rerum.io/app/update",
-        OVERWRITE: "http://tinydev.rerum.io/app/overwrite",
-        QUERY: "http://tinydev.rerum.io/app/query",
+        CREATE: "http://tinydev.rerum.io/create",
+        UPDATE: "http://tinydev.rerum.io/update",
+        OVERWRITE: "http://tinydev.rerum.io/overwrite",
+        QUERY: "http://tinydev.rerum.io/query",
         SINCE: "http://devstore.rerum.io/v1/since"
     },
 

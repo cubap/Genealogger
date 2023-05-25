@@ -45,7 +45,7 @@ and open the template in the editor.
                 "@type": "Person",
                 name: label
             }
-            fetch("http://tinydev.rerum.io/app/create", {
+            fetch("http://tinydev.rerum.io/create", {
                 method: 'POST',
                 mode: 'cors',
                 headers: {
@@ -64,7 +64,7 @@ let id = newPerson.new_obj_state['@id']
                         targetCollection: "Genealogger-085522"
                     }
                 }
-                fetch("http://tinydev.rerum.io/app/create", {
+                fetch("http://tinydev.rerum.io/create", {
                     method: 'POST',
                     mode: 'cors',
                     headers: {
@@ -104,7 +104,7 @@ let id = newPerson.new_obj_state['@id']
                     "body.gender": {"$exists": true},
                     target: parentID
                 }
-                fetch("http://tinydev.rerum.io/app/query", {
+                fetch("http://tinydev.rerum.io/query", {
                     method: 'POST',
                     mode: 'cors',
                     headers: {
