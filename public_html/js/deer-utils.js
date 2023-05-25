@@ -126,11 +126,11 @@ export default {
     async expand(entity, matchOn = ["__rerum.generatedBy", "creator"]) {
         let UTILS = this
         let findId = entity["@id"] || entity.id || entity
-        findId = findId?.replace(/https?:/,'https:')
         if (typeof findId !== "string") {
             UTILS.warning("Unable to find URI in object:", entity)
             return entity
         }
+        findId = findId?.replace(/https?:/,'https:')
         let getVal = UTILS.getValue
         return fetch(findId).then(response => response.json())
             .then(obj => UTILS.findByTargetId(findId)
