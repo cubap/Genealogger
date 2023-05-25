@@ -102,7 +102,7 @@ and open the template in the editor.
                         "body.gender": {"$exists": true},
                         target: parentID
                     }
-                    fetch("http://tinydev.rerum.io/query", {
+                    fetch("https://tinydev.rerum.io/query", {
                         method: 'POST',
                         mode: 'cors',
                         headers: {
@@ -137,7 +137,7 @@ and open the template in the editor.
                         "__rerum.history.next": {"$exists": true, "$size": 0},
                         "body.hasAgent.value": personID
                     }
-                    fetch("http://tinydev.rerum.io/query", {
+                    fetch("https://tinydev.rerum.io/query", {
                         method: 'POST',
                         mode: 'cors',
                         headers: {
@@ -148,7 +148,7 @@ and open the template in the editor.
                             .catch(() => (null))
                             .then(pointers => {
                                 let list = []
-                                pointers.map(tc => list.push(fetch("http://tinydev.rerum.io/query", {
+                                pointers.map(tc => list.push(fetch("https://tinydev.rerum.io/query", {
                                         method: 'POST',
                                         mode: 'cors',
                                         headers: {

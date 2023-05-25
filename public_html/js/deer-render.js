@@ -273,7 +273,7 @@ DEER.TEMPLATES.childrenList = function (obj, options = {}) {
             }],
             "__rerum.history.next": { "$exists": true, "$size": 0 }
         }
-        return fetch("http://tinydev.rerum.io/query", {
+        return fetch("https://tinydev.rerum.io/query", {
             method: 'POST',
             mode: 'cors',
             headers: {
@@ -360,7 +360,7 @@ DEER.TEMPLATES.personDates = function (obj, options = {}) {
                 "body.hasAgent.value": obj["@id"]
             }
             let dates = []
-            return fetch("http://tinydev.rerum.io/query", {
+            return fetch("https://tinydev.rerum.io/query", {
                 method: 'POST',
                 mode: 'cors',
                 headers: {

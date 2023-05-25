@@ -24,12 +24,12 @@ export default {
     PRIMITIVES: ["name", "creator", "label"],
 
     URLS: {
-        BASE_ID: "http://devstore.rerum.io/v1",
-        CREATE: "http://tinydev.rerum.io/create",
-        UPDATE: "http://tinydev.rerum.io/update",
-        OVERWRITE: "http://tinydev.rerum.io/overwrite",
-        QUERY: "http://tinydev.rerum.io/query",
-        SINCE: "http://devstore.rerum.io/v1/since"
+        BASE_ID: https://devstore.rerum.io/v1",
+        CREATE: https://tinydev.rerum.io/create",
+        UPDATE: https://tinydev.rerum.io/update",
+        OVERWRITE: https://tinydev.rerum.io/overwrite",
+        QUERY: https://tinydev.rerum.io/query",
+        SINCE: https://devstore.rerum.io/v1/since"
     },
 
     EVENTS: {
@@ -55,7 +55,7 @@ export default {
      * or an HTML String.
      */
     TEMPLATES: {
-        cat: (obj) => `<h5>${obj.name}</h5><img src="http://placekitten.com/300/150" style="width:100%;">`
+        cat: (obj) => `<h5>${obj.name}</h5><img src="https://placekitten.com/300/150" style="width:100%;">`
     },
 
     version: "alpha 0.10"
