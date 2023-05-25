@@ -12,8 +12,12 @@
 
 import { default as DEER } from './deer-config.js'
 
-const httpsIdLinks = (id)=> {
-    return [ id.replace(/^https?:/,'https:'), id.replace(/^https?:/,'http:') ]
+const httpsIdLinks = (id) => {
+    return [id.replace(/^https?:/, 'https:'), id.replace(/^https?:/, 'http:')]
+}
+
+const httpsQueryArray = (id) => {
+    return { $in: httpsIdLinks(id) }
 }
 
 export default {
@@ -33,7 +37,7 @@ export default {
         }).then(response => response.json())
             .then(function (pointers) {
                 let list = []
-                pointers.map(tc => list.push(fetch(tc.target?.replace(/https?:/,'https:')).then(response => response.json())))
+                pointers.map(tc => list.push(fetch(tc.target?.replace(/https?:/, 'https:')).then(response => response.json())))
                 return Promise.all(list)
             })
             .then(function (list) {
@@ -42,10 +46,8 @@ export default {
     },
 
     httpsIdLinks,
-    
-    httpsQueryArray:(id)=> {
-        return { $in: httpsIdLinks(id) }
-    },
+
+    httpsQueryArray,
 
     getValue: function (property, alsoPeek = [], asType) {
         // TODO: There must be a best way to do this...
@@ -132,7 +134,7 @@ export default {
             UTILS.warning("Unable to find URI in object:", entity)
             return entity
         }
-        findId = findId?.replace(/https?:/,'https:')
+        findId = findId?.replace(/https?:/, 'https:')
         let getVal = UTILS.getValue
         return fetch(findId).then(response => response.json())
             .then(obj => UTILS.findByTargetId(findId)
@@ -292,7 +294,7 @@ export default {
      * @param [String] targetStyle other formats of resource targeting.  May be null
      */
     findByTargetId: async function (id, targetStyle = []) {
-        let everything = Object.keys(localStorage).filter(entry=>entry.startsWith("http")).map(k => JSON.parse(localStorage.getItem(k)))
+        let everything = Object.keys(localStorage).filter(entry => entry.startsWith("http")).map(k => JSON.parse(localStorage.getItem(k)))
         if (!Array.isArray(targetStyle)) {
             targetStyle = [targetStyle]
         }
