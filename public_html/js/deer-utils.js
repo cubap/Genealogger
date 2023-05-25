@@ -42,7 +42,7 @@ export default {
     },
     
     httpsQueryArray:(id)=> {
-        return { $in: httpsIdLinks(id) }
+        return { $in: this.httpsIdLinks(id) }
     },
 
     getValue: function (property, alsoPeek = [], asType) {
