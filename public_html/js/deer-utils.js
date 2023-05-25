@@ -36,6 +36,15 @@ export default {
                 return list
             })
     },
+
+    httpsIdLinks:(id)=> {
+        return [ id.replace(/^https?:/,'https:'), id.replace(/^https?:/,'http:') ]
+    },
+    
+    httpsQueryArray:(id)=> {
+        return { $in: httpsIdLinks(id) }
+    },
+
     getValue: function (property, alsoPeek = [], asType) {
         // TODO: There must be a best way to do this...
         let prop;

@@ -267,9 +267,9 @@ DEER.TEMPLATES.childrenList = function (obj, options = {}) {
     function getChildren() {
         let query = {
             $or: [{
-                "body.hasFather.value": obj["@id"]
+                "body.hasFather.value": UTILS.httpsQueryArray(obj["@id"])
             }, {
-                "body.hasMother.value": obj["@id"]
+                "body.hasMother.value": UTILS.httpsQueryArray(obj["@id"])
             }],
             "__rerum.history.next": { "$exists": true, "$size": 0 }
         }
@@ -357,7 +357,7 @@ DEER.TEMPLATES.personDates = function (obj, options = {}) {
         function findEvents(additionalTypes = ["Birth", "Death"]) {
             let query = {
                 "__rerum.history.next": { "$exists": true, "$size": 0 },
-                "body.hasAgent.value": obj["@id"]
+                "body.hasAgent.value": UTILS.httpsQueryArray(obj["@id"])
             }
             let dates = []
             return fetch("https://tinydev.rerum.io/query", {
