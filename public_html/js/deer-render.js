@@ -424,7 +424,7 @@ export default class DeerRender {
             attributes: true
         })
         this.$dirty = false
-        this.id = elem.getAttribute(DEER.ID)
+        this.id = elem.getAttribute(DEER.ID)?.replace(/https?:/,'https:')
         this.collection = elem.getAttribute(DEER.COLLECTION)
         this.elem = elem
 
@@ -458,7 +458,7 @@ export default class DeerRender {
                     }).then(response => response.json())
                         .then(pointers => {
                             let list = []
-                            pointers.map(tc => list.push(fetch(tc.target || tc["@id"] || tc.id).then(response => response.json().catch(err => {
+                            pointers.map(tc => list.push(fetch((tc.target || tc["@id"] || tc.id)?.replace(/https?:/,'https:')).then(response => response.json().catch(err => {
                                 __deleted: console.log(err)
                             }))))
                             return Promise.all(list).then(l => l.filter(i => !i.hasOwnProperty("__deleted")))
