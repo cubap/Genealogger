@@ -299,13 +299,14 @@ export default {
         targetStyle = targetStyle.concat(["target", "target.@id", "target.id"]) //target.source?
         let historyWildcard = { "$exists": true, "$size": 0 }
         let obj = { "$or": [], "__rerum.history.next": historyWildcard }
+        const uris = httpsQueryArray(id)
         for (let target of targetStyle) {
             //Entries that are not strings are not supported.  Ignore those entries.  
             //TODO: should we we let the user know we had to ignore something here?
             if (typeof target === "string") {
-                let o = {}
-                o[target] = id
-                obj["$or"].push(o)
+                const altQuery = {}
+                altQuery[target] = uris
+                obj.$or.push(altQuery)
             }
         }
         let matches = await fetch(DEER.URLS.QUERY, {
