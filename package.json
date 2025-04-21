@@ -1,6 +1,8 @@
 {
     "name": "Genealogger",
     "version": "1.0.0",
+    "description": "A quick demonstration of the way Eventities can be used in family relationships to emulate genealogical software",
+    "license": "Proprietary",
     "keywords": [
         "util",
         "functional",
@@ -11,5 +13,12 @@
     "author": "cubap",
     "contributors": [
     ],
-    "dependencies": {}
+    "dependencies": {},
+    "scripts": {
+        "test": "echo 'No tests specified yet'"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/cubap/Genealogger"
+    }
 }
