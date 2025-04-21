@@ -16,9 +16,14 @@ const changeLoader = new MutationObserver(renderChange)
 var DEER = config
 
 /**
- * Observer callback for rendering newly loaded objects. Checks the
- * mutationsList for "deep-object" attribute changes.
- * @param {Array} mutationsList of MutationRecord objects
+ * @description Iterates through mutations on an element and performs actions based
+ * on the attribute name. It sets or retrieves JSON-formatted data from local storage
+ * based on the attribute value, and adds a listener to handle click events on the element.
+ * 
+ * @param {array} mutationsList - list of mutations to apply to the DOM element, and
+ * is used in an iteration to execute the logic for each mutation.
+ * 
+ * @returns {boolean} a mutated HTML element with updated data from local storage.
  */
 async function renderChange(mutationsList) {
     for (var mutation of mutationsList) {
@@ -54,6 +59,18 @@ async function renderChange(mutationsList) {
 }
 
 export default class DeerReport {
+    /**
+     * @description Defines a JavaScript class that sets up DEER (Declarative Event-Driven
+     * Annotation Rendering) annotation handling for an HTML form. It listens to DOM
+     * events, handles value retrieval and validation, and broadcasts form rendering events.
+     * 
+     * @param {object} elem - HTML element for which the script is checking and setting
+     * the value of its annotation attribute.
+     * 
+     * @param {object} deer - Deer library's initialization object, which is used to
+     * provide access to various utility functions and events for managing form and view
+     * data.
+     */
     constructor(elem, deer = {}) {
         for (let key in DEER) {
             if (typeof DEER[key] === "string") {
@@ -221,6 +238,19 @@ export default class DeerReport {
         }
     }
 
+    /**
+     * @description Takes an input element and creates a new DEER annotation with its own
+     * ID, based on the input's ID. It also sets the annotation's "value" field to the
+     * input's value, and adds any additional fields specified in the input (such as
+     * "title", "name", or "evidence"). The function then submits the new annotation to
+     * the DEER server for storage.
+     * 
+     * @param {string} event - event or action that triggered the creation of the new
+     * entity, and it is used to specify the URL for fetching the entity data from the
+     * DEER API.
+     * 
+     * @returns {object} a new entity with the updated annotation information.
+     */
     processRecord(event) {
         event.preventDefault()
         this.evidence = this.elem.getAttribute(DEER.EVIDENCE) // inherited to inputs
@@ -375,6 +405,17 @@ export default class DeerReport {
             })
     }
 
+    /**
+     * @description Upserts a simple JSON object to a specified URL, based on the values
+     * of form inputs. It checks for required fields, supports array inputs, and returns
+     * the result of the HTTP request.
+     * 
+     * @param {object} event - annotation event for which the function is generating
+     * documentation, and it is not used in the provided code.
+     * 
+     * @returns {object} a JSON-formatted object representing the submitted form data,
+     * ready to be saved or updated.
+     */
     simpleUpsert(event) {
         let record = {}
         //Since this is simple, we don't need to filter around $isDirty.
@@ -463,10 +504,22 @@ export default class DeerReport {
 }
 
 /**
- * Generate a new object URI for a resource. Abstract additional
- * properties to annotations.
- * @param {Object} obj complete resource to process
- * @param {Object} attribution creator and generator identities
+ * @description Creates a new resource by sending an HTTP POST request to the
+ * `CREATE_URL` endpoint, passing in the JSON representation of the resource as the
+ * request body. If the request is successful, it updates the list of resources stored
+ * locally and returns the newly created resource.
+ * 
+ * @param {object} obj - JSON object containing information about a resource, which
+ * is used to generate high-quality documentation for that resource.
+ * 
+ * @param {object} attribution - entity responsible for creating the new object, and
+ * is used to set the value of the `creator` property in the generated resource.
+ * 
+ * @param {array} evidence - evidence associated with the created object, which is
+ * optional and can be provided for further attribution or authentication purposes.
+ * 
+ * @returns {object} a JSON object containing information about the newly created
+ * object, including its ID, context, type, and name.
  */
 async function create(obj, attribution, evidence) {
     let mint = {
@@ -534,6 +587,16 @@ async function create(obj, attribution, evidence) {
     return newObj.new_obj_state
 }
 
+/**
+ * @description Iterates over select elements with a class of "deer-form" and creates
+ * a `DeerReport` instance for each one. Additionally, it listens for new forms to
+ * be added via the `DEER.EVENTS.NEW_FORM` event and creates instances for those as
+ * well.
+ * 
+ * @param {object} config - configuration for the DeerForms library, which includes
+ * settings such as the forms to be processed, the event listeners, and other
+ * customization options.
+ */
 export function initializeDeerForms(config) {
     const forms = document.querySelectorAll(config.FORM)
     Array.from(forms).forEach(elem => new DeerReport(elem, config))
