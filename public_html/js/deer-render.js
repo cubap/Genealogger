@@ -680,7 +680,7 @@ class DeerSvgTree extends HTMLElement {
         const g = svg.append('g')
 
         const root = d3.hierarchy(data)
-        const treeLayout = d3.tree().nodeSize([150, 50]) // Adjust for vertical layout
+        const treeLayout = d3.tree().nodeSize([15, 250]) 
         treeLayout(root)
 
         // Links
@@ -688,10 +688,10 @@ class DeerSvgTree extends HTMLElement {
             .data(root.links())
             .join('line')
             .attr('class', 'link')
-            .attr('x1', d => d.source.x)
-            .attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x)
-            .attr('y2', d => d.target.y)
+            .attr('x1', d => d.source.y) 
+            .attr('y1', d => d.source.x)
+            .attr('x2', d => d.target.y)
+            .attr('y2', d => d.target.x)
             .attr('stroke', '#555')
             .attr('stroke-width', 1.5)
 
@@ -700,7 +700,7 @@ class DeerSvgTree extends HTMLElement {
             .data(root.descendants())
             .join('g')
             .attr('class', 'node')
-            .attr('transform', d => `translate(${d.x},${d.y})`)
+            .attr('transform', d => `translate(${d.y},${d.x})`) 
             .call(d3.drag()
                 .on('start', (event) => {
                     svg.style('cursor', 'grabbing')
@@ -716,9 +716,9 @@ class DeerSvgTree extends HTMLElement {
             d.data.name
                 ? d3.select(this)
                     .append('rect') // Append rectangle for the node
-                    .attr('width', 100)
+                    .attr('width', 150)
                     .attr('height', 30)
-                    .attr('x', -50)
+                    .attr('x', -75)
                     .attr('y', -15)
                     .attr('fill', '#999')
                     .attr('stroke', '#555')
@@ -733,18 +733,18 @@ class DeerSvgTree extends HTMLElement {
                     .style('fill', '#fff')
                 : d3.select(this)
                     .append('foreignObject') // Append foreignObject for nodes without names
-                    .attr('width', 200)
+                    .attr('width', 150)
                     .attr('height', 50)
-                    .attr('x', -100)
+                    .attr('x', 0)
                     .attr('y', -15)
                     .append('xhtml:div')
                     .attr('class', 'void-parent')
                     .html(d => {
                         let buttons = ''
-                        if (!d.data.hasFather) {
+                        if (d.data.hasOwnProperty('hasFather')) {
                             buttons += `[ <a href="parents.html?#${d.data.id}">add father</a> ] `
                         }
-                        if (!d.data.hasMother) {
+                        if (d.data.hasOwnProperty('hasMother')) {
                             buttons += `[ <a href="parents.html?#${d.data.id}">add mother</a> ]`
                         }
                         return buttons
