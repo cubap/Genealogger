@@ -21,6 +21,8 @@ and open the template in the editor.
 
         <deer-tree id="treeDetail">Loading tree</deer-tree>
 
+        <deer-svg-tree id="svgTree"></deer-svg-tree>
+
         <script src="js/deer.js" type="module"></script>   
         <script>
             document.addEventListener("DOMContentLoaded", () => {
@@ -32,6 +34,7 @@ and open the template in the editor.
             window.onhashchange = () => {
                 let personID = window.location.hash.substr(1)
                 treeDetail.setAttribute("deer-id", personID)
+                svgTree.setAttribute("deer-id", personID)
                 personBanner.setAttribute("deer-id", personID)
                 childrenList.setAttribute("deer-id", personID)
             }

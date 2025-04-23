@@ -15,6 +15,7 @@
 
 import { default as UTILS } from './deer-utils.js'
 import { default as config } from './deer-config.js'
+import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm'
 
 const changeLoader = new MutationObserver(renderChange)
 var DEER = config
@@ -227,8 +228,8 @@ class DeerLabelTemplate extends HTMLElement {
         const prop = obj[key] || "[ undefined ]"
         const label = UTILS.getLabel(obj, prop)
         try {
-            this.innerHTML = options.link 
-                ? `<a href="${options.link + obj['@id']}">${label}</a>` 
+            this.innerHTML = options.link
+                ? `<a href="${options.link + obj['@id']}">${label}</a>`
                 : `${label}`
         } catch (err) {
             this.innerHTML = `<span>Error loading data</span>`
@@ -278,7 +279,7 @@ class DeerEntityTemplate extends HTMLElement {
             let value = UTILS.getValue(obj[key], key)
             try {
                 if ((value.image || value.trim()).length > 0) {
-                    list += (label === "depiction") 
+                    list += (label === "depiction")
                         ? `<img title="${label}" src="${value.image || value}" ${DEER.SOURCE}="${UTILS.getValue(obj[key].source, 'citationSource')}">`
                         : `<dt deer-source="${UTILS.getValue(obj[key].source, 'citationSource')}">${label}</dt><dd>${value.image || value}</dd>`
                 }
@@ -485,7 +486,7 @@ class DeerChildrenListTemplate extends HTMLElement {
     }
 
     async render() {
-        const obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+        let obj = JSON.parse(this.getAttribute('data-obj') || '{}')
         if (Object.keys(obj).length === 0) {
             const id = this.getAttribute(DEER.ID)
             if (id) {
@@ -560,9 +561,231 @@ class DeerTimelineTemplate extends HTMLElement {
     }
 }
 
+class DeerTreeTemplate extends HTMLElement {
+    static get observedAttributes() {
+        return [DEER.ID]
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if (name === DEER.ID && oldValue !== newValue) {
+            await this.render()
+        }
+    }
+
+    async render() {
+        let obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+        if (!Object.keys(obj).length) {
+            const id = this.getAttribute(DEER.ID)
+            if (id) {
+                obj = await fetch(id).then(res => res.json()).catch(() => ({}))
+            }
+            obj = await UTILS.expand(obj)
+        }
+
+        const params = new URLSearchParams(location.search)
+        const showall = params.get("showall")
+        if (showall) {
+            DEER.showall = true
+        }
+
+        try {
+            const tmpl = `
+                <style>
+                    .tree-detail {
+                        display: flex;
+                        align-items: center;
+                        padding: 0 0 0 1.5rem;
+                        background: linear-gradient(90deg, rgba(0, 0, 0, .1), transparent);
+                        white-space: nowrap;
+                        overflow: visible;
+                        margin-bottom: 1rem;
+                    }
+                    .tree-detail a {
+                        display: inline-block;
+                        min-width: 10em;
+                    }
+                    .parents {
+                        flex-direction: column;
+                    }
+                    .tree-detail > deer-tree {
+                        min-width: 10rem;
+                        text-align: center;
+                    }
+                    .parents > deer-tree[data-uri]:not([deer-id]) {
+                        border: outset medium;
+                        margin: .2rem;
+                        font-size: .68rem;
+                        cursor: pointer;
+                    }
+                </style>
+                <div class="tree-detail">
+                    <a href="#${obj["@id"]}" title="Click to View">
+                        <deer-view deer-template="personDates" deer-id="${obj['@id']}">${UTILS.getLabel(obj)}</deer-view>
+                    </a>
+                    <div class="parents">
+                        ${obj.hasFather
+                    ? `<deer-tree ${DEER.showall ? `deer-id` : `data-uri`}="${UTILS.getValue(obj.hasFather)}">loading father...</deer-tree>`
+                    : `<div class="void-parent">[ <a href="parents.html?#${obj['@id']}">add father</a> ]</div>`}
+                        ${obj.hasMother
+                    ? `<deer-tree ${DEER.showall ? `deer-id` : `data-uri`}="${UTILS.getValue(obj.hasMother)}">loading mother...</deer-tree>`
+                    : `<div class="void-parent">[ <a href="parents.html?#${obj['@id']}">add mother</a> ]</div>`}
+                    </div>
+                </div>
+            `
+            this.innerHTML = tmpl
+
+            Array.from(this.querySelectorAll(".parents > [data-uri]")).forEach(node => {
+                node.onclick = ev => ev.target.setAttribute("deer-id", ev.target.getAttribute("data-uri"))
+            })
+        } catch (err) {
+            this.innerHTML = `<span>Error loading tree</span>`
+        }
+    }
+}
+
+class DeerSvgTree extends HTMLElement {
+    static get observedAttributes() {
+        return ['deer-id']
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if (name === 'deer-id' && oldValue !== newValue) {
+            await this.render()
+        }
+    }
+
+    async render() {
+        const id = this.getAttribute('deer-id')
+        if (!id) {
+            this.innerHTML = `<span>Error: Missing deer-id</span>`
+            return
+        }
+
+        let obj = await fetch(id).then(res => res.json()).catch(() => ({}))
+        obj = await UTILS.expand(obj)
+
+        const data = await this.transformData(obj)
+        if (!data) {
+            this.innerHTML = `<span>Error: Unable to load tree data</span>`
+            return
+        }
+
+        this.innerHTML = '' // Clear any existing content
+        const svg = d3.select(this).append('svg')
+            .attr('width', 800)
+            .attr('height', 600)
+            .attr('viewBox', [-400, -300, 800, 600])
+            .style('cursor', 'grab')
+
+        const g = svg.append('g')
+
+        const root = d3.hierarchy(data)
+        const treeLayout = d3.tree().nodeSize([150, 50]) // Adjust for vertical layout
+        treeLayout(root)
+
+        // Links
+        g.selectAll('.link')
+            .data(root.links())
+            .join('line')
+            .attr('class', 'link')
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y)
+            .attr('stroke', '#555')
+            .attr('stroke-width', 1.5)
+
+        // Nodes
+        const nodes = g.selectAll('.node')
+            .data(root.descendants())
+            .join('g')
+            .attr('class', 'node')
+            .attr('transform', d => `translate(${d.x},${d.y})`)
+            .call(d3.drag()
+                .on('start', (event) => {
+                    svg.style('cursor', 'grabbing')
+                    event.subject.fx = event.subject.x
+                    event.subject.fy = event.subject.y
+                })
+                .on('end', () => {
+                    svg.style('cursor', 'grab')
+                })
+            )
+
+        nodes.each(function (d) {
+            d.data.name
+                ? d3.select(this)
+                    .append('rect') // Append rectangle for the node
+                    .attr('width', 100)
+                    .attr('height', 30)
+                    .attr('x', -50)
+                    .attr('y', -15)
+                    .attr('fill', '#999')
+                    .attr('stroke', '#555')
+                    .attr('stroke-width', 2) &&
+                d3.select(this)
+                    .append('text') // Append text for nodes with names
+                    .attr('text-anchor', 'middle')
+                    .attr('alignment-baseline', 'middle')
+                    .text(d.data.name)
+                    .style('font-size', '12px')
+                    .style('font-family', 'Arial, sans-serif')
+                    .style('fill', '#fff')
+                : d3.select(this)
+                    .append('foreignObject') // Append foreignObject for nodes without names
+                    .attr('width', 200)
+                    .attr('height', 50)
+                    .attr('x', -100)
+                    .attr('y', -15)
+                    .append('xhtml:div')
+                    .attr('class', 'void-parent')
+                    .html(d => {
+                        let buttons = ''
+                        if (!d.data.hasFather) {
+                            buttons += `[ <a href="parents.html?#${d.data.id}">add father</a> ] `
+                        }
+                        if (!d.data.hasMother) {
+                            buttons += `[ <a href="parents.html?#${d.data.id}">add mother</a> ]`
+                        }
+                        return buttons
+                    })
+        })
+
+        // Add zoom and pan functionality
+        svg.call(d3.zoom()
+            .scaleExtent([0.5, 2])
+            .on('zoom', (event) => {
+                g.attr('transform', event.transform)
+            }))
+    }
+
+    async transformData(obj) {
+        if (!obj || !obj['@id']) return null
+
+        const buildTree = async (node) => {
+            if (!node) return null
+            const name = UTILS.getLabel(node)
+            const ancestors = []
+            const addAncestor = async (relation, label) => {
+                ancestors.push(node[relation]
+                    ? await buildTree(await UTILS.expand(node[relation]?.value).catch(() => null))
+                    : { id: node['@id'], [relation]: false })
+            }
+
+            await addAncestor('hasFather', 'Father')
+            await addAncestor('hasMother', 'Mother')
+
+            return { name, children: ancestors, id: node['@id'], hasFather: node.hasFather, hasMother: node.hasMother }
+        }
+        return await buildTree(obj)
+    }
+}
+
 customElements.define('deer-event', DeerEventTemplate)
 customElements.define('deer-children-list', DeerChildrenListTemplate)
 customElements.define('deer-timeline', DeerTimelineTemplate)
+customElements.define('deer-tree', DeerTreeTemplate)
+customElements.define('deer-svg-tree', DeerSvgTree)
 
 export default class DeerRender {
     constructor(elem, deer = {}) {
@@ -577,7 +800,7 @@ export default class DeerRender {
             attributes: true
         })
         this.$dirty = false
-        this.id = elem.getAttribute(DEER.ID)?.replace(/https?:/,'https:')
+        this.id = elem.getAttribute(DEER.ID)?.replace(/https?:/, 'https:')
         this.collection = elem.getAttribute(DEER.COLLECTION)
         this.elem = elem
 
@@ -601,7 +824,7 @@ export default class DeerRender {
                         }],
                         "__rerum.history.next": historyWildcard
                     }
-                    fetch(DEER.URLS.QUERY+'?limit=100', {
+                    fetch(DEER.URLS.QUERY + '?limit=100', {
                         method: "POST",
                         mode: "cors",
                         headers: new Headers({
@@ -613,12 +836,12 @@ export default class DeerRender {
                             let list = []
                             pointers.map(tc => {
                                 let tid = tc.target || tc["@id"] || tc.id
-                                tid = tid?.replace(/https?:/,'https:')
+                                tid = tid?.replace(/https?:/, 'https:')
                                 return list.push(fetch(tid)
-                                .then(response => response.json())
-                                .catch(err => {
-                                    __deleted: console.log(err)
-                                }))
+                                    .then(response => response.json())
+                                    .catch(err => {
+                                        __deleted: console.log(err)
+                                    }))
                             })
                             return Promise.all(list).then(l => l.filter(i => !i.hasOwnProperty("__deleted")))
                         })
