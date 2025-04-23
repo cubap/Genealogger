@@ -112,18 +112,36 @@ RENDER.element = function (elem, obj) {
  * @param {Object} options additional properties to draw with the JSON
  */
 class DeerJsonTemplate extends HTMLElement {
-    connectedCallback() {
-        const obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+    static get observedAttributes() {
+        return [DEER.ID]
+    }
+
+    async connectedCallback() {
+        this.innerHTML = `<span>Loading...</span>` // Placeholder HTML
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if (name === DEER.ID && oldValue !== newValue) {
+            await this.render()
+        }
+    }
+
+    async render() {
+        let obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+        if (Object.keys(obj).length === 0) {
+            const id = this.getAttribute(DEER.ID)
+            if (id) {
+                obj = await fetch(id).then(res => res.json()).catch(() => ({}))
+            }
+            obj = await UTILS.expand(obj)
+        }
         const options = JSON.parse(this.getAttribute('data-options') || '{}')
         const indent = options.indent || 4
-        const replacer = (k, v) => {
-            if (DEER.SUPPRESS.indexOf(k) !== -1) return null
-            return v
-        }
+        const replacer = (k, v) => (DEER.SUPPRESS.includes(k) ? null : v)
         try {
             this.innerHTML = `<pre>${JSON.stringify(obj, replacer, indent)}</pre>`
         } catch (err) {
-            this.innerHTML = null
+            this.innerHTML = `<span>Error rendering JSON</span>`
         }
     }
 }
@@ -137,8 +155,29 @@ customElements.define('deer-json', DeerJsonTemplate)
  * @param {String} label The label to be displayed when drawn
  */
 class DeerPropTemplate extends HTMLElement {
-    connectedCallback() {
-        const obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+    static get observedAttributes() {
+        return [DEER.ID]
+    }
+
+    async connectedCallback() {
+        this.innerHTML = `<span>Loading...</span>` // Placeholder HTML
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if (name === DEER.ID && oldValue !== newValue) {
+            await this.render()
+        }
+    }
+
+    async render() {
+        let obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+        if (Object.keys(obj).length === 0) {
+            const id = this.getAttribute(DEER.ID)
+            if (id) {
+                obj = await fetch(id).then(res => res.json()).catch(() => ({}))
+            }
+            obj = await UTILS.expand(obj)
+        }
         const options = JSON.parse(this.getAttribute('data-options') || '{}')
         const key = options.key || "@id"
         const prop = obj[key] || "[ undefined ]"
@@ -146,7 +185,7 @@ class DeerPropTemplate extends HTMLElement {
         try {
             this.innerHTML = `<span class="${prop}">${label}: ${UTILS.getValue(prop) || "[ undefined ]"}</span>`
         } catch (err) {
-            this.innerHTML = null
+            this.innerHTML = `<span>Error loading data</span>`
         }
     }
 }
@@ -160,8 +199,29 @@ customElements.define('deer-prop', DeerPropTemplate)
  * @param {String} label The label to be displayed when drawn
  */
 class DeerLabelTemplate extends HTMLElement {
-    connectedCallback() {
-        const obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+    static get observedAttributes() {
+        return [DEER.ID]
+    }
+
+    async connectedCallback() {
+        this.innerHTML = `<span>Loading...</span>` // Placeholder HTML
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if (name === DEER.ID && oldValue !== newValue) {
+            await this.render()
+        }
+    }
+
+    async render() {
+        let obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+        if (Object.keys(obj).length === 0) {
+            const id = this.getAttribute(DEER.ID)
+            if (id) {
+                obj = await fetch(id).then(res => res.json()).catch(() => ({}))
+            }
+            obj = await UTILS.expand(obj)
+        }
         const options = JSON.parse(this.getAttribute('data-options') || '{}')
         const key = options.key || "@id"
         const prop = obj[key] || "[ undefined ]"
@@ -171,7 +231,7 @@ class DeerLabelTemplate extends HTMLElement {
                 ? `<a href="${options.link + obj['@id']}">${label}</a>` 
                 : `${label}`
         } catch (err) {
-            this.innerHTML = null
+            this.innerHTML = `<span>Error loading data</span>`
         }
     }
 }
@@ -184,8 +244,29 @@ customElements.define('deer-label', DeerLabelTemplate)
  * @param {Object} options additional properties to draw with the Entity
  */
 class DeerEntityTemplate extends HTMLElement {
-    connectedCallback() {
-        const obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+    static get observedAttributes() {
+        return [DEER.ID]
+    }
+
+    async connectedCallback() {
+        this.innerHTML = `<div>Loading...</div>` // Placeholder HTML
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if (name === DEER.ID && oldValue !== newValue) {
+            await this.render()
+        }
+    }
+
+    async render() {
+        let obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+        if (Object.keys(obj).length === 0) {
+            const id = this.getAttribute(DEER.ID)
+            if (id) {
+                obj = await fetch(id).then(res => res.json()).catch(() => ({}))
+            }
+            obj = await UTILS.expand(obj)
+        }
         const options = JSON.parse(this.getAttribute('data-options') || '{}')
         let tmpl = `<h2>${UTILS.getLabel(obj)}</h2>`
         let list = ''
@@ -236,33 +317,115 @@ class DeerEntityTemplate extends HTMLElement {
 }
 
 class DeerListTemplate extends HTMLElement {
-    connectedCallback() {
-        const obj = JSON.parse(this.getAttribute('data-obj') || '{}')
-        const options = JSON.parse(this.getAttribute('data-options') || '{}')
-        let tmpl = `<h2>${UTILS.getLabel(obj)}</h2>`
-        if (options.list) {
-            tmpl += `<ul>`
-            obj[options.list].forEach((val, index) => {
-                let name = UTILS.getLabel(val, (val.type || val['@type'] || index))
-                tmpl += (val["@id"] && options.link)
-                    ? `<li ${DEER.ID}="${val["@id"]}"><a href="${options.link}${val["@id"]}">${name}</a></li>`
-                    : `<li ${DEER.ID}="${val["@id"]}">${name}</li>`
-            })
-            tmpl += `</ul>`
+    link = this.getAttribute(DEER.LINK) ?? ''
+    static get observedAttributes() {
+        return ['data-obj', DEER.COLLECTION]
+    }
+
+    async connectedCallback() {
+        this.innerHTML = `<span>Loading...</span>` // Placeholder HTML
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if ((name === 'data-obj' || name === DEER.COLLECTION) && oldValue !== newValue) {
+            await this.render()
         }
+    }
+
+    async render() {
+        let obj = JSON.parse(this.getAttribute('data-obj') ?? '{}')
+        const collection = this.getAttribute(DEER.COLLECTION)
+
+        if (!Object.keys(obj).length && collection) {
+            const historyWildcard = { "$exists": true, "$size": 0 }
+            const queryObj = {
+                $or: [
+                    { "targetCollection": collection },
+                    { "body.targetCollection": collection }
+                ],
+                "__rerum.history.next": historyWildcard
+            }
+
+            const pointers = await fetch(`${DEER.URLS.QUERY}?limit=100`, {
+                method: "POST",
+                mode: "cors",
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify(queryObj)
+            }).then(res => res.json()).catch(() => [])
+
+            const list = await Promise.all(
+                pointers.map(({ target, "@id": id, id: fallbackId }) => {
+                    const tid = (target || id || fallbackId)?.replace(/https?:/, 'https:')
+                    return fetch(tid).then(res => res.json()).catch(() => ({ __deleted: true }))
+                })
+            ).then(results => results.filter(item => !item.__deleted))
+
+            if (!list.length) {
+                this.innerHTML = `<span>No items found in the collection</span>`
+                return
+            }
+
+            obj = {
+                name: collection,
+                itemListElement: list,
+                "@type": list[0]?.["@type"] ?? list[0]?.type ?? "ItemList"
+            }
+        }
+
+        const { list: listKey = '', link = '' } = JSON.parse(this.getAttribute('data-options') ?? '{}')
+        const itemList = obj.itemListElement ?? []
+
+        if (!itemList.length) {
+            this.innerHTML = `<span>No items to display</span>`
+            return
+        }
+
+        let tmpl = `<h2>${UTILS.getLabel(obj)}</h2><ul>`
+        itemList.forEach((val, index) => {
+            const name = UTILS.getLabel(val, val.type ?? val['@type'] ?? index)
+            tmpl += val["@id"] && this.link
+                ? `<li ${DEER.ID}="${val["@id"]}"><a href="${this.link}${val["@id"]}">${name}</a></li>`
+                : `<li ${DEER.ID}="${val["@id"]}">${name}</li>`
+        })
+        tmpl += `</ul>`
+
         this.innerHTML = tmpl
     }
 }
 
 class DeerPersonTemplate extends HTMLElement {
-    connectedCallback() {
-        const obj = JSON.parse(this.getAttribute('data-obj') || '{}')
-        const options = JSON.parse(this.getAttribute('data-options') || '{}')
+    static get observedAttributes() {
+        return [DEER.ID]
+    }
+
+    async connectedCallback() {
+        this.innerHTML = `<span>Loading...</span>` // Placeholder HTML
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if (name === DEER.ID && oldValue !== newValue) {
+            await this.render()
+        }
+    }
+
+    async render() {
+        let obj = JSON.parse(this.getAttribute('data-obj') ?? '{}')
+        if (!Object.keys(obj).length) {
+            const id = this.getAttribute(DEER.ID)
+            if (id) {
+                obj = await fetch(id).then(res => res.json()).catch(() => ({}))
+            }
+            obj = await UTILS.expand(obj)
+        }
+
+        const { key: birthKey = "birthDate", label: birthLabel = "Birth Date" } = {}
+        const { key: deathKey = "deathDate", label: deathLabel = "Death Date" } = {}
+        const dob = `<deer-prop-template data-obj='${JSON.stringify(obj)}' data-options='{"key": "${birthKey}", "label": "${birthLabel}"}'></deer-prop-template>`
+        const dod = `<deer-prop-template data-obj='${JSON.stringify(obj)}' data-options='{"key": "${deathKey}", "label": "${deathLabel}"}'></deer-prop-template>`
+
+        const famName = obj.familyName ? UTILS.getValue(obj.familyName) : "[ unknown ]"
+        const givenName = obj.givenName ? UTILS.getValue(obj.givenName) : ""
         let tmpl = `<h2>${UTILS.getLabel(obj)}</h2>`
-        let dob = `<deer-prop-template data-obj='${JSON.stringify(obj)}' data-options='{"key": "birthDate", "label": "Birth Date"}'></deer-prop-template>`
-        let dod = `<deer-prop-template data-obj='${JSON.stringify(obj)}' data-options='{"key": "deathDate", "label": "Death Date"}'></deer-prop-template>`
-        let famName = (obj.familyName && UTILS.getValue(obj.familyName)) || "[ unknown ]"
-        let givenName = (obj.givenName && UTILS.getValue(obj.givenName)) || ""
         tmpl += (obj.familyName || obj.givenName) ? `<div>Name: ${famName}, ${givenName}</div>` : ''
         tmpl += dob + dod
         tmpl += `<a href="#${obj["@id"]}">${UTILS.getLabel(obj)}</a>`
@@ -275,16 +438,61 @@ customElements.define('deer-list', DeerListTemplate)
 customElements.define('deer-person', DeerPersonTemplate)
 
 class DeerEventTemplate extends HTMLElement {
-    connectedCallback() {
-        const obj = JSON.parse(this.getAttribute('data-obj') || '{}')
-        this.innerHTML = `<h1>${UTILS.getLabel(obj)}</h1>`
+    static get observedAttributes() {
+        return [DEER.ID]
+    }
+
+    async connectedCallback() {
+        this.innerHTML = `<span>Loading...</span>` // Placeholder HTML
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if (name === DEER.ID && oldValue !== newValue) {
+            await this.render()
+        }
+    }
+
+    async render() {
+        let obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+        if (Object.keys(obj).length === 0) {
+            const id = this.getAttribute(DEER.ID)
+            if (id) {
+                obj = await fetch(id).then(res => res.json()).catch(() => ({}))
+            }
+            obj = await UTILS.expand(obj)
+        }
+        try {
+            this.innerHTML = `<h1>${UTILS.getLabel(obj)}</h1>`
+        } catch (err) {
+            this.innerHTML = `<span>Error loading event</span>`
+        }
     }
 }
 
 class DeerChildrenListTemplate extends HTMLElement {
-    connectedCallback() {
+    static get observedAttributes() {
+        return [DEER.ID]
+    }
+
+    async connectedCallback() {
+        this.innerHTML = `<span>Seeking children...</span>` // Placeholder HTML
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if (name === DEER.ID && oldValue !== newValue) {
+            await this.render()
+        }
+    }
+
+    async render() {
         const obj = JSON.parse(this.getAttribute('data-obj') || '{}')
-        const options = JSON.parse(this.getAttribute('data-options') || '{}')
+        if (Object.keys(obj).length === 0) {
+            const id = this.getAttribute(DEER.ID)
+            if (id) {
+                obj = await fetch(id).then(res => res.json()).catch(() => ({}))
+            }
+            obj = await UTILS.expand(obj)
+        }
 
         const getChildren = async () => {
             const query = {
@@ -306,28 +514,48 @@ class DeerChildrenListTemplate extends HTMLElement {
             return annos.map(a => UTILS.getValue(a.target))
         }
 
-        this.innerHTML = `<ul> Seeking children...</ul>`
+        const kIDs = await getChildren()
+        this.innerHTML = kIDs.length
+            ? `<ul>Offspring
+                ${kIDs.reduce((b, a) => b += `<li><deer-view deer-id="${a}" deer-template="label" deer-link="#" title="Click to view"></deer-view></li>`, ``)}
+               </ul>`
+            : `[ no child records ]`
 
-        getChildren().then(kIDs => {
-            this.innerHTML = kIDs.length
-                ? `<ul>Offspring
-                    ${kIDs.reduce((b, a) => b += `<li><deer-view deer-id="${a}" deer-template="label" deer-link="#" title="Click to view"></deer-view></li>`, ``)}
-                   </ul>`
-                : `[ no child records ]`
-
-            setTimeout(() => UTILS.broadcast(undefined, DEER.EVENTS.NEW_VIEW, this, { set: this.querySelectorAll("[deer-template]") }), 0)
-        })
+        setTimeout(() => UTILS.broadcast(undefined, DEER.EVENTS.NEW_VIEW, this, { set: this.querySelectorAll("[deer-template]") }), 0)
     }
 }
 
 class DeerTimelineTemplate extends HTMLElement {
-    connectedCallback() {
-        const obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+    static get observedAttributes() {
+        return [DEER.ID]
+    }
+
+    async connectedCallback() {
+        this.innerHTML = `<span>Loading timeline...</span>` // Placeholder HTML
+    }
+
+    async attributeChangedCallback(name, oldValue, newValue) {
+        if (name === DEER.ID && oldValue !== newValue) {
+            await this.render()
+        }
+    }
+
+    async render() {
+        let obj = JSON.parse(this.getAttribute('data-obj') || '{}')
+        if (Object.keys(obj).length === 0) {
+            const id = this.getAttribute(DEER.ID)
+            if (id) {
+                obj = await fetch(id).then(res => res.json()).catch(() => ({}))
+            }
+            obj = await UTILS.expand(obj)
+        }
+
         let tmpl = `<ul>`
-        for (const item of obj.itemListElement) {
+        for (const item of obj.itemListElement || []) {
             tmpl += `<li><deer-view deer-template="personDates" deer-id="${item['@id']}"></deer-view></li>`
         }
         tmpl += `</ul>`
+
         this.innerHTML = tmpl
     }
 }
@@ -404,7 +632,12 @@ export default class DeerRender {
                                 listObj["@type"] = list[0]["@type"] || list[0].type || "ItemList"
                             } catch (err) {
                             }
-                            RENDER.element(this.elem, listObj)
+                            const deerList = document.createElement('deer-list')
+                            deerList.setAttribute('data-obj', JSON.stringify(listObj))
+                            deerList.setAttribute('data-options', JSON.stringify({ list: this.elem.getAttribute(DEER.LIST), link: this.elem.getAttribute(DEER.LINK) }))
+                            Array.from(this.elem.attributes).forEach(attr => deerList.setAttribute(attr.name, attr.value))
+                            this.elem.replaceWith(deerList)
+                            this.elem = deerList
                         })
                 }
             }
