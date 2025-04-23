@@ -13,28 +13,31 @@ and open the template in the editor.
     </head>
     <body>
         <a href="./">home</a>
-        <h3><deer-view id="personBanner" deer-template="label" deer-key="name">Label</deer-view></h3>
-    <deer-view id="childrenList" deer-template="childrenList"></deer-view>
+        <h3><deer-label id="personBanner" deer-key="name">Label</deer-label></h3>
+        <deer-children-list id="childrenList"></deer-children-list>
         <p>
             View tree for person. <a href="javascript:location='?showall=true'+location.hash;">showall</a>
         </p>
 
-    <deer-view deer-template="tree" id="treeDetail">Loading tree</deer-view>
+        <deer-tree id="treeDetail">Loading tree</deer-tree>
 
-    <script src="js/deer.js" type="module"></script>   
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            let params = new URLSearchParams(location.search)
-            window.onhashchange()
-        })
-    </script>
-    <script>
-        window.onhashchange = () => {
-            let personID = window.location.hash.substr(1)
-            treeDetail.setAttribute("deer-id", personID)
-            personBanner.setAttribute("deer-id", personID)
-            childrenList.setAttribute("deer-id", personID)
-        }
-    </script>
-</body>
+        <deer-svg-tree id="svgTree"></deer-svg-tree>
+
+        <script src="js/deer.js" type="module"></script>   
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                let params = new URLSearchParams(location.search)
+                window.onhashchange()
+            })
+        </script>
+        <script>
+            window.onhashchange = () => {
+                let personID = window.location.hash.substr(1)
+                treeDetail.setAttribute("deer-id", personID)
+                svgTree.setAttribute("deer-id", personID)
+                personBanner.setAttribute("deer-id", personID)
+                childrenList.setAttribute("deer-id", personID)
+            }
+        </script>
+    </body>
 </html>

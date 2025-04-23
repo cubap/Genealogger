@@ -22,7 +22,7 @@ and open the template in the editor.
     </head>
     <body>
         <a href="./">home</a>
-        <h3 class="deer-view" id="personBanner" deer-template="label" deer-key="name">[ new person ]</h3>
+        <h3 class="deer-view" id="personBanner" deer-key="name">[ new person ]</h3>
         <p>
             Quickly add a parent for this person.
         </p>
@@ -36,7 +36,7 @@ and open the template in the editor.
             <label>Residence: <input id="homeID" type="text" deer-key="homeLocation"></label>
             <input type="submit" value="set person details">
         </form>
-    <deer-view deer-collection="Genealogger-085522" id="allFolks" style="visibility:hidden;">loading...</deer-view>
+    <deer-collection deer-collection="Genealogger-085522" id="allFolks" style="visibility:hidden;">loading...</deer-collection>
     <script src="js/deer.js" type="module"></script>   
     <script>
         function newPerson(elem) {

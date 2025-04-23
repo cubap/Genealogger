@@ -15,11 +15,7 @@ and open the template in the editor.
 
 <body>
     <a href="./">home</a>
-    <deer-view id='personDetail' deer-template="entity">
-        <p>No person is selected. <a href="./">View list</a>, add a parent on the family tree or just add someone below.
-        </p>
-        <button role="button" id="namePerson" onclick="newPerson('dadID')">Add a new person</button>
-    </deer-view>
+    <deer-entity id='personDetail'></deer-entity>
     <div id="adding" style="display: none;">
         <a class="person-detail" href="tree.html#">View Family Tree</a>
         <a class="person-detail" href="birth.html?person=">Add Birth</a>
@@ -31,7 +27,7 @@ and open the template in the editor.
         <a class="person-detail">Add Depiction</a>
 
         <h5>Dates</h5>
-        <deer-view id="pDates" deer-template="personDates">No dates</deer-view>
+        <deer-person-dates id="pDates">No dates</deer-person-dates>
     </div>
     <script src="js/deer.js" type="module"></script>
     <script>
