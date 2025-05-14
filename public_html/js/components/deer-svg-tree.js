@@ -235,13 +235,16 @@ class DeerSvgTree extends HTMLElement {
                 svg.transition()
                     .duration(500)
                     .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale))
-                // Highlight the active node
-                nodes.select('rect').attr('fill', '#999')
-                d3.select(this).select('rect').attr('fill', '#1976d2')
                 // Lazy expand: if not already expanded, expand this node
                 if (!expandedNodes.has(d.data.id)) {
                     expandedNodes.add(d.data.id)
                     updateTree()
+                } else {
+                    // Highlight the active node after updateTree
+                    setTimeout(() => {
+                        g.selectAll('.node rect').attr('fill', '#999')
+                        d3.select(this).select('rect').attr('fill', '#1976d2')
+                    }, 0)
                 }
             })
             // --- Tooltip events ---
@@ -289,6 +292,29 @@ class DeerSvgTree extends HTMLElement {
             .scaleExtent([0.5, 2])
             .on('zoom', (event) => {
                 g.attr('transform', event.transform)
+                // On pan/zoom, add all visible nodes to expandedNodes
+                const visibleNodes = root.descendants().filter(d => {
+                    let show = d.depth <= MAX_INITIAL_DEPTH || expandedNodes.has(d.data.id)
+                    if (!show) {
+                        let ancestor = d.parent
+                        while (ancestor) {
+                            if (expandedNodes.has(ancestor.data.id)) {
+                                show = true
+                                break
+                            }
+                            ancestor = ancestor.parent
+                        }
+                    }
+                    return show
+                })
+                let changed = false
+                for (const d of visibleNodes) {
+                    if (!expandedNodes.has(d.data.id)) {
+                        expandedNodes.add(d.data.id)
+                        changed = true
+                    }
+                }
+                if (changed) updateTree()
             })
         svg.call(zoom)
 
@@ -338,6 +364,55 @@ class DeerSvgTree extends HTMLElement {
             // For now, just reload with forceRefresh
             await this.renderWithForceRefresh()
         })
+
+        // Add fullscreen button
+        const fullscreenBtn = document.createElement('button')
+        fullscreenBtn.innerHTML = '⛶'
+        fullscreenBtn.title = 'Fullscreen'
+        fullscreenBtn.style.position = 'absolute'
+        fullscreenBtn.style.top = '8px'
+        fullscreenBtn.style.right = '8px'
+        fullscreenBtn.style.zIndex = 20
+        fullscreenBtn.style.background = '#fff'
+        fullscreenBtn.style.border = '1px solid #1976d2'
+        fullscreenBtn.style.borderRadius = '4px'
+        fullscreenBtn.style.padding = '4px 8px'
+        fullscreenBtn.style.cursor = 'pointer'
+        fullscreenBtn.style.fontSize = '20px'
+        fullscreenBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.10)'
+        this.style.position = 'relative'
+        this.appendChild(fullscreenBtn)
+
+        fullscreenBtn.addEventListener('click', () => {
+            const el = this.querySelector('svg')
+            if (el.requestFullscreen) {
+                el.requestFullscreen()
+            } else if (el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen()
+            } else if (el.msRequestFullscreen) {
+                el.msRequestFullscreen()
+            }
+        })
+
+        // Set white background when SVG is fullscreen
+        const svgEl = this.querySelector('svg')
+        if (svgEl) {
+            svgEl.addEventListener('fullscreenchange', () => {
+                if (document.fullscreenElement === svgEl) {
+                    svgEl.style.background = '#fff'
+                } else {
+                    svgEl.style.background = ''
+                }
+            })
+            // For webkit
+            svgEl.addEventListener('webkitfullscreenchange', () => {
+                if (document.webkitFullscreenElement === svgEl) {
+                    svgEl.style.background = '#fff'
+                } else {
+                    svgEl.style.background = ''
+                }
+            })
+        }
     }
 
     // Add a helper to render with forceRefresh
