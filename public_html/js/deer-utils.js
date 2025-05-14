@@ -510,3 +510,7 @@ export default {
     }
 
 }
+// Utility functions have been split into modules in ./utils/
+export * from './utils/string-utils.js'
+export * from './utils/dom-utils.js'
+export * from './utils/data-utils.js'

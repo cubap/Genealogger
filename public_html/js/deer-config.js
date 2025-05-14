@@ -47,16 +47,5 @@ export default {
     DELIMETERDEFAULT: ",", //Default delimeter for .split()ing and .join()ing 
     ROBUSTFEEDBACK: true, //Show warnings along with errors in the web console.  Set to false to only see errors.  
 
-    /**
-     * Add any custom templates here through import or copy paste.
-     * Templates added here will overwrite the defaults in deer-render.js.
-     * 
-     * Each property must be lower-cased and return a template literal
-     * or an HTML String.
-     */
-    TEMPLATES: {
-        cat: (obj) => `<h5>${obj.name}</h5><img src="https://placekitten.com/300/150" style="width:100%;">`
-    },
-
     version: "alpha 0.10"
 }

@@ -38,7 +38,8 @@ and open the template in the editor.
         </form>
     <deer-collection deer-collection="Genealogger-085522" id="allFolks" style="visibility:hidden;">loading...</deer-collection>
     <script src="js/deer.js" type="module"></script>   
-    <script>
+    <script type="module">
+        import { getValue } from './js/utils/data-utils.js';
         function newPerson(elem) {
             let label = prompt("Enter a name:")
             let person = {
@@ -118,7 +119,7 @@ let id = newPerson.new_obj_state['@id']
                                 dadID.value = parentID
                             } else {
                                 // Just take the first assertion for now
-                                let gender = UTILS.getValue(genders[0].body.gender)
+                                let gender = getValue(genders[0].body.gender)
                                 if ((/female/i).test(gender)) {
                                     momID.value = parentID
                                 } else if ((/male/i).test(gender)) {

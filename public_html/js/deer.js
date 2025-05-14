@@ -15,8 +15,7 @@ import { default as DEER } from './deer-config.js'
 
 // Overwrite or add certain values to the configuration to customize.
 
-// new template
-DEER.TEMPLATES.cat = (obj) => `<h5>${obj.name}</h5><img src="https://placekitten.com/300/150" style="width:100%;">`
+// Legacy template registry logic removed. All rendering now uses custom elements.
 
 // sandbox repository URLS
 DEER.URLS = {
