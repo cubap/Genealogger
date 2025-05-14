@@ -81,7 +81,7 @@ RENDER.element = function (elem, obj) {
         }
         let templateResponse = template(obj, options)
         elem.innerHTML = (typeof templateResponse.html === "string") ? templateResponse.html : templateResponse
-        //innerHTML may need a little time to finish to actually populate the template to the DOM, so do the timeout trick here.
+        //innerHTMLmay need a little time to finish to actually populate the template to the DOM, so do the timeout trick here.
         /**
          * A streamlined approach would treat each of these as a Promise-like node and the return of RENDER.element
          * would be a Promise.  That way, something that looped and did may of these could do something like
@@ -476,7 +476,7 @@ class DeerChildrenListTemplate extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Seeking children...</span>` // Placeholder HTML
+        this.innerHTML = `<span>Seeking children...</span>`
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -504,25 +504,35 @@ class DeerChildrenListTemplate extends HTMLElement {
                 "__rerum.history.next": { "$exists": true, "$size": 0 }
             }
 
-            const response = await fetch("https://tinydev.rerum.io/query", {
+            const annos = await fetch("https://tinydev.rerum.io/query", {
                 method: 'POST',
                 mode: 'cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(query)
-            })
+            }).then(res => res.json()).catch(() => [])
 
-            const annos = await response.json().catch(() => [])
             return annos.map(a => UTILS.getValue(a.target))
         }
 
         const kIDs = await getChildren()
-        this.innerHTML = kIDs.length
-            ? `<ul>Offspring
-                ${kIDs.reduce((b, a) => b += `<li><deer-view deer-id="${a}" deer-template="label" deer-link="#" title="Click to view"></deer-view></li>`, ``)}
-               </ul>`
-            : `[ no child records ]`
-
-        setTimeout(() => UTILS.broadcast(undefined, DEER.EVENTS.NEW_VIEW, this, { set: this.querySelectorAll("[deer-template]") }), 0)
+        this.innerHTML = ''
+        if (kIDs.length) {
+            const ul = document.createElement('ul')
+            ul.textContent = 'Offspring'
+            kIDs.forEach(id => {
+            const li = document.createElement('li')
+            const deerLabel = document.createElement('deer-label')
+            deerLabel.setAttribute('deer-id', id)
+            deerLabel.setAttribute('deer-template', 'label')
+            deerLabel.setAttribute('title', 'Click to view')
+            deerLabel.setAttribute('data-options', JSON.stringify({ link: '#' }))
+            li.appendChild(deerLabel)
+            ul.appendChild(li)
+            })
+            this.appendChild(ul)
+        } else {
+            this.textContent = '[ no child records ]'
+        }
     }
 }
 
