@@ -4,12 +4,13 @@ To change this license header, choose License Headers in Project Properties.
 To change this template file, choose Tools | Templates
 and open the template in the editor.
 -->
-<html>
+<html lang="en">
     <head>
-        <title>Genealogger</title>
+        <title>Genealogger - Death</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
+        <script src="js/deer.js" type="module"></script>
     </head>
     <body>
         <a href="./">home</a>
@@ -28,8 +29,7 @@ and open the template in the editor.
         <a class="person-detail" id="graveLink" href="grave.html">Grave</a>
         <!--http://rdf.muninn-project.org/ontologies/graves.html#term_hasLocation-->
                 <a class="person-detail" href="birth.html?person=">Add Birth</a>
-
-        <script src="js/deer.js" type="module"></script>   
+        <select class="personDropdown" title="Select a person"></select>
         <script>
             document.addEventListener("DOMContentLoaded", () => {
                 let params = new URLSearchParams(location.search)

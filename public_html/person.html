@@ -4,19 +4,20 @@ To change this license header, choose License Headers in Project Properties.
 To change this template file, choose Tools | Templates
 and open the template in the editor.
 -->
-<html>
+<html lang="en">
 
 <head>
-    <title>Genealogger</title>
+    <title>Genealogger - Person</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
+    <script src="js/deer.js" type="module"></script>
 </head>
 
 <body>
     <a href="./">home</a>
     <deer-entity id='personDetail'></deer-entity>
-    <div id="adding" style="display: none;">
+    <div id="adding" class="hidden">
         <a class="person-detail" href="tree.html#">View Family Tree</a>
         <a class="person-detail" href="birth.html?person=">Add Birth</a>
         <a class="person-detail">Add Residence</a>
@@ -29,7 +30,6 @@ and open the template in the editor.
         <h5>Dates</h5>
         <deer-person-dates id="pDates">No dates</deer-person-dates>
     </div>
-    <script src="js/deer.js" type="module"></script>
     <script>
         window.onhashchange = window.onload = () => {
             let personID = window.location.hash.substr(1)

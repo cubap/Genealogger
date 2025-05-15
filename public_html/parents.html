@@ -4,21 +4,13 @@ To change this license header, choose License Headers in Project Properties.
 To change this template file, choose Tools | Templates
 and open the template in the editor.
 -->
-<html>
+<html lang="en">
     <head>
-        <title>Genealogger</title>
+        <title>Genealogger - Parents</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
-        <style>
-            [deer-id]::before {
-                display:grid;
-                content:attr(deer-id);
-                text-align: right;
-                opacity: .7;
-                font-size: .78rem;
-            }
-        </style>
+        <script src="js/deer.js" type="module"></script>
     </head>
     <body>
         <a href="./">home</a>
@@ -27,17 +19,16 @@ and open the template in the editor.
             Quickly add a parent for this person.
         </p>
         <form deer-type="Person" deer-context="http://schema.org" id="parentDetail" deer-motivation="describing" deer-creator="cubap">
-            <button role="button" onclick="newPerson('dadID')">Add a new father</button>
-            <select class="personDropdown"></select>
+            <button type="button" role="button" onclick="newPerson('dadID')">Add a new father</button>
+            <select class="personDropdown" title="Select a person"></select>
             <label>Father: <input id="dadID" type="text" deer-key="hasFather"></label>
-            <button role="button" onclick="newPerson('momID')">Add a new mother</button>
-            <select class="personDropdown"></select>
+            <button type="button" role="button" onclick="newPerson('momID')">Add a new mother</button>
+            <select class="personDropdown" title="Select a person"></select>
             <label>Mother: <input id="momID" type="text" deer-key="hasMother"></label>
             <label>Residence: <input id="homeID" type="text" deer-key="homeLocation"></label>
             <input type="submit" value="set person details">
         </form>
     <deer-collection deer-collection="Genealogger-085522" id="allFolks" style="visibility:hidden;">loading...</deer-collection>
-    <script src="js/deer.js" type="module"></script>   
     <script type="module">
         import { getValue } from './js/utils/data-utils.js';
         function newPerson(elem) {

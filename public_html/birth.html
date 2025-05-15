@@ -4,30 +4,13 @@ To change this license header, choose License Headers in Project Properties.
 To change this template file, choose Tools | Templates
 and open the template in the editor.
 -->
-<html>
+<html lang="en">
     <head>
-        <title>Genealogger</title>
+        <title>Genealogger - Birth</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
-        <style>
-            [deer-id]::before {
-                display:grid;
-                content:attr(deer-id);
-                text-align: right;
-                opacity: .7;
-                font-size: .78rem;
-            }
-            form {
-                padding: 1em 0;
-                width: 40em;
-                max-width: 98vw;
-                margin: 0 auto;
-            }
-            .personDropdown {
-                float: right;
-            }
-        </style>
+        <script src="js/deer.js" type="module"></script>
     </head>
     <body>
         <a href="./">home</a>
@@ -61,7 +44,7 @@ and open the template in the editor.
             <input type="submit" value="record event outcomes">
         </form>
         <form deer-type="Person" deer-context="http://schema.org" id="parentDetail" deer-motivation="describing" deer-creator="cubap">
-            <select class="personDropdown"></select>
+            <select class="personDropdown" title="Select a person"></select>
             <label>Father: <input id="dadID" type="text" deer-key="hasFather"></label>
             <select class="personDropdown"></select>
             <label>Mother: <input id="momID" type="text" deer-key="hasMother"></label>
@@ -69,7 +52,6 @@ and open the template in the editor.
             <input type="submit" value="set person details">
         </form>
     <deer-view deer-collection="Genealogger-085522" id="allFolks" style="visibility:hidden;">loading...</deer-view>
-        <script src="js/deer.js" type="module"></script>   
         <script type="module">
             import { getValue } from './js/utils/data-utils.js';
             function updatePersonInput(event){
