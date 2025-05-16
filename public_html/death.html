@@ -14,22 +14,21 @@ and open the template in the editor.
     </head>
     <body>
         <a href="./">home</a>
-        <h3><deer-label id="personBanner" deer-key="name">Label</deer-label></h3>
-        <p>
-            Add or modify death records for a person.
-        </p>
-        <form deer-type="Death" id="deathDetail" deer-context="http://schema.org">
-        <input type="hidden" deer-key="hasAgent" id="personDetail">
-            <input type="hidden" deer-key="creator" value="cubap">
-            <p>Evidence</p>
-            <label>Place of Death: <input type="text" deer-key="deathPlace" tabindex="1"></label>
-            <label>Date of Death: <input id="deathDate" type="date" deer-key="deathDate" tabindex="1"></label>
-            <input type="submit" value="+">
-        </form>
-        <a class="person-detail" id="graveLink" href="grave.html">Grave</a>
-        <!--http://rdf.muninn-project.org/ontologies/graves.html#term_hasLocation-->
-                <a class="person-detail" href="birth.html?person=">Add Birth</a>
-        <select class="personDropdown" title="Select a person"></select>
+        <div class="material-card">
+            <h2>Add Death</h2>
+            <form deer-type="Death" id="deathDetail" deer-context="http://schema.org">
+                <input type="hidden" deer-key="hasAgent" id="personDetail">
+                <input type="hidden" deer-key="creator" value="cubap">
+                <p>Evidence</p>
+                <label>Place of Death: <input type="text" deer-key="deathPlace" tabindex="1"></label>
+                <label>Date of Death: <input id="deathDate" type="date" deer-key="deathDate" tabindex="1"></label>
+                <input type="submit" value="+">
+            </form>
+            <a class="person-detail" id="graveLink" href="grave.html">Grave</a>
+            <!--http://rdf.muninn-project.org/ontologies/graves.html#term_hasLocation-->
+            <a class="person-detail" href="birth.html?person=">Add Birth</a>
+            <select class="personDropdown material-btn" title="Select a person"></select>
+        </div>
         <script>
             document.addEventListener("DOMContentLoaded", () => {
                 let params = new URLSearchParams(location.search)

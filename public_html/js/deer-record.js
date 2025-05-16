@@ -100,7 +100,9 @@ export default class DeerReport {
             expand({ "@id": this.id })
                 .then((obj) => {
                     try {
-                        for (let i = 0; i < inputElems.length; i++) {
+                        for (let i = 0; i < this.inputs.length; i++) {
+                            const el = this.inputs[i]
+                            const deerKeyValue = el.getAttribute(DEER.KEY)
                             if (deerKeyValue) {
                                 if (obj.hasOwnProperty(deerKeyValue)) {
                                     if(obj[deerKeyValue].evidence)el.setAttribute(DEER.EVIDENCE, obj[deerKeyValue].evidence)
