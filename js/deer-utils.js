@@ -53,8 +53,10 @@ export default {
         // TODO: There must be a best way to do this...
         let prop;
         if (property === undefined || property === "") {
-            console.error("Value of property to lookup is missing!")
-            return undefined
+            if (DEER.ROBUSTFEEDBACK.valueOf()) {
+                console.error("Value of property to lookup is missing!")
+            }
+            return '' // Return empty string instead of undefined for UI safety
         }
         if (Array.isArray(property)) {
             // It is an array of things, we can only presume that we want the array.  If it needs to become a string, local functions take on that responsibility.
