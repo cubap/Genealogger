@@ -65,7 +65,7 @@ and open the template in the editor.
                     elem.oninput = updatePersonInput
                 })
             }
-            document.addEventListener("DOMContentLoaded", function () {
+            document.addEventListener("DOMContentLoaded", async function () {
                 let params = new URLSearchParams(window.location.search)
                 let personID = params.get("person")
                 let birthID = window.location.hash.substr(1)
@@ -105,6 +105,31 @@ and open the template in the editor.
                             personDetail.value = personID
                             personBanner.setAttribute("deer-id", personID)
                             parentDetail.setAttribute("deer-id", personID)
+                            // Fallback: If no birth event, try to populate birth form from person entity
+                            try {
+                                const personObj = await fetch(personID).then(r => r.json())
+                                if (personObj.birthPlace) {
+                                    birthDetail.querySelector('[deer-key="birthPlace"]').value = personObj.birthPlace
+                                }
+                                if (personObj.birthDate) {
+                                    birthDetail.querySelector('[deer-key="birthDate"]').value = personObj.birthDate
+                                }
+                                if (personObj.gender) {
+                                    birthDetail.querySelector('[deer-key="gender"]').value = personObj.gender
+                                }
+                                if (personObj.givenName) {
+                                    birthDetail.querySelector('[deer-key="givenName"]').value = personObj.givenName
+                                }
+                                if (personObj.familyName) {
+                                    birthDetail.querySelector('[deer-key="familyName"]').value = personObj.familyName
+                                }
+                                if (personObj.additionalName) {
+                                    birthDetail.querySelector('[deer-key="additionalName"]').value = personObj.additionalName
+                                }
+                                if (personObj.alternateName) {
+                                    birthDetail.querySelector('[deer-key="alternateName"]').value = personObj.alternateName
+                                }
+                            } catch (err) { /* ignore if not found */ }
                         }
                         if (birthID) {
                             birthDetail.setAttribute("deer-id", birthID)

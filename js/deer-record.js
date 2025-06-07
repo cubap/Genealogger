@@ -62,8 +62,8 @@ async function renderChange(mutationsList) {
 
 export default class DeerReport {
     /**
-     * @description Defines a JavaScript class that sets up DEER (Declarative Event-Driven
-     * Annotation Rendering) annotation handling for an HTML form. It listens to DOM
+     * @description Defines a JavaScript class that sets up DEER (Data Entry and Exhibition
+     * for RERUM) annotation handling for an HTML form. It listens to DOM
      * events, handles value retrieval and validation, and broadcasts form rendering events.
      * 
      * @param {object} elem - HTML element for which the script is checking and setting

@@ -9,6 +9,13 @@ export function httpsQueryArray(id) {
     return { $in: httpsIdLinks(id) }
 }
 
+/**
+ * Robustly extract a value from a property, handling DEER-style value objects, arrays, and primitives.
+ * @param {*} property - The property to extract a value from (can be primitive, array, or object)
+ * @param {Array<string>} alsoPeek - Additional keys to check inside objects (default: common value keys)
+ * @param {string} asType - Optionally coerce the value to a type ('STRING', 'NUMBER', etc)
+ * @returns {*} The extracted value, or array of values if input was an array
+ */
 export function getValue(property, alsoPeek = [], asType) {
     let prop
     if (property === undefined || property === "") {
@@ -16,12 +23,10 @@ export function getValue(property, alsoPeek = [], asType) {
         return undefined
     }
     if (Array.isArray(property)) {
-        return property
+        return property.map(p => getValue(p, alsoPeek, asType))
     } else {
         if (typeof property === "object") {
-            if (!Array.isArray(alsoPeek)) {
-                alsoPeek = [alsoPeek]
-            }
+            if (!Array.isArray(alsoPeek)) alsoPeek = [alsoPeek]
             alsoPeek = alsoPeek.concat(["@value", "value", "$value", "val"])
             for (let k of alsoPeek) {
                 if (property.hasOwnProperty(k)) {
@@ -52,12 +57,29 @@ export function getValue(property, alsoPeek = [], asType) {
             default:
         }
     } catch (err) {
-        if (asType) {
-            throw new Error("asType: '" + asType + "' is not possible.\n" + err.message)
-        }
+        if (asType) throw new Error("asType: '" + asType + "' is not possible.\n" + err.message)
     } finally {
-        return (prop?.length === 1) ? prop[0] : prop
+        return (Array.isArray(prop) && prop.length === 1) ? prop[0] : prop
     }
+}
+
+/**
+ * Given a person object, extract the birth/death date from related eventities (birth/death events).
+ * @param {object} personObj - The person object (already expanded)
+ * @param {Array<object>} allEvents - Array of all event objects (already expanded)
+ * @returns {{birthDate: string|undefined, deathDate: string|undefined}}
+ */
+export function getEventDates(personObj, allEvents = []) {
+    let birthDate, deathDate
+    for (const event of allEvents) {
+        if (event.additionalType === 'Birth' && event.hasAgent === personObj['@id']) {
+            birthDate = event.birthDate || event.date || event.startDate
+        }
+        if (event.additionalType === 'Death' && event.hasAgent === personObj['@id']) {
+            deathDate = event.deathDate || event.date || event.startDate
+        }
+    }
+    return { birthDate, deathDate }
 }
 
 export function cleanArray(arr) {
@@ -150,34 +172,25 @@ export async function expand(entity, matchOn = ["__rerum.generatedBy", "creator"
         console.warn("Unable to find URI in object:", entity)
         return entity
     }
-    findId = findId?.replace(/https?:/, 'https:')
+    findId = findId.replace(/https?:/, 'https:')
     const obj = await fetchWithCache(findId, forceRefresh)
-    // --- Begin annotation merging logic (restored from original UTILS.expand) ---
+
     try {
         const annos = await findByTargetId(findId)
-        for (let i = 0; i < annos.length; i++) {
-            let body
-            try {
-                body = annos[i].body
-            } catch (err) { continue }
-            if (!body) { continue }
+        for (const anno of annos) {
+            let body = anno.body
+            if (!body) continue
             if (body.evidence) {
-                obj.evidence = (typeof body.evidence === "object") ? body.evidence["@id"] : body.evidence
+                obj.evidence = typeof body.evidence === "object" ? body.evidence["@id"] : body.evidence
             }
-            if (!Array.isArray(body)) {
-                body = [body]
-            }
-            Leaf: for (let j = 0; j < body.length; j++) {
-                try {
-                    // No checkMatch for now, just merge
-                    let assertion = body[j]
-                    let keys = Object.keys(assertion)
-                    let k = keys[0]
-                    if (keys.length > 1 || k === 0) {
-                        console.warn("This assertion is not as expected and may not have been interpreted correctly.", assertion)
-                    }
-                    let val = assertion[k]
-                    // Assign this to the main object.
+            const bodies = Array.isArray(body) ? body : [body]
+            for (const assertion of bodies) {
+                const keys = Object.keys(assertion)
+                if (keys.length !== 1) {
+                    console.warn("This assertion is not as expected and may not have been interpreted correctly.", assertion)
+                }
+                for (const k of keys) {
+                    const val = assertion[k]
                     if (obj.hasOwnProperty(k)) {
                         if (typeof obj[k] === "string") {
                             obj[k] = val
@@ -189,13 +202,12 @@ export async function expand(entity, matchOn = ["__rerum.generatedBy", "creator"
                     } else {
                         obj[k] = val
                     }
-                } catch (err_1) { }
+                }
             }
         }
     } catch (err) {
         // If annotation fetch fails, just return the base object
     }
-    // --- End annotation merging logic ---
     return obj
 }
 
