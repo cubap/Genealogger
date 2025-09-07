@@ -20,6 +20,7 @@ and open the template in the editor.
 <body>
     <a href="./">home</a>
     <deer-entity id="personDetail" class="material-card"></deer-entity>
+    <deer-nickname-editor id="nicknameEditor" class="material-card"></deer-nickname-editor>
     <div id="adding" class="person-actions hidden">
         <div class="action-buttons">
             <a class="person-detail material-btn" href="tree.html#">View Family Tree</a>
@@ -39,11 +40,25 @@ and open the template in the editor.
             let personID = window.location.hash.substr(1)
             if (personID) {
                 personDetail.setAttribute("deer-id", personID)
+                nicknameEditor.setAttribute("deer-id", personID)
                     ;[...document.querySelectorAll('.person-detail')].forEach(el => el.href += personID)
                 pDates.setAttribute('deer-id', personID)
                 adding.classList.remove("hidden")
             }
         }
+
+        // Listen for nickname updates and refresh the person display
+        document.addEventListener('deer-updated', (event) => {
+            if (event.detail?.nickname !== undefined || event.detail?.nick !== undefined) {
+                // Clear the cache for this person and refresh the display
+                const personID = personDetail.getAttribute('deer-id')
+                if (personID) {
+                    localStorage.removeItem(personID)
+                    personDetail.setAttribute('deer-id', '')
+                    setTimeout(() => personDetail.setAttribute('deer-id', personID), 10)
+                }
+            }
+        })
 
         function newPerson() {
             let label = prompt("Enter a name:")

@@ -36,6 +36,7 @@ import { default as record, initializeDeerForms } from './deer-record.js'
 
 // Import custom components
 import './components/deer-typeahead-filter.js'
+import './components/deer-nickname-editor.js'
 
 // fire up the element detection as needed
 try {
@@ -44,5 +45,13 @@ try {
 } catch (err) {
     // silently fail if render or record is not loaded
 }
+
+// Global listener for nickname updates to refresh displays
+document.addEventListener('deer-updated', (event) => {
+    if ((event.detail?.nickname !== undefined || event.detail?.nick !== undefined) && event.detail?.['@id']) {
+        // Clear cache for the updated person so components will refetch
+        localStorage.removeItem(event.detail['@id'])
+    }
+})
 
 

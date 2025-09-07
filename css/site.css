@@ -204,6 +204,104 @@ deer-typeahead-filter {
     display: none;
 }
 
+/* Nickname Editor Styles */
+.nickname-editor {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.nickname-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nickname-label {
+    font-weight: 500;
+    color: #666;
+}
+
+.nickname-field-label {
+    display: block;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.nickname-value {
+    flex: 1;
+    color: #333;
+    font-style: italic;
+}
+
+.nickname-input {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.nickname-input:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.nickname-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.material-btn-small {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #bbdefb;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.material-btn-small:hover {
+    background: #bbdefb;
+}
+
+.material-btn-secondary {
+    background: #f5f5f5;
+    color: #666;
+    border: 1px solid #ddd;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.material-btn-secondary:hover {
+    background: #e0e0e0;
+}
+
+.edit-icon {
+    font-size: 0.8rem;
+}
+
+.nickname-editor.editing {
+    background: #fff;
+    border-color: #1976d2;
+}
+
 /* Responsive */
 @media (max-width: 800px) {
   deer-list, header, nav, main, footer {

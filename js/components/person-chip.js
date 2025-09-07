@@ -86,9 +86,11 @@ class PersonChip extends HTMLElement {
                 .icons { font-size: 1.1em }
             </style>
             <div class="chip" title="${label}">
-                <span class="name">${label}</span>
-                <span class="summary">${summary}${age ? ' • ' + age : ''}</span>
-                <span class="icons">${genderIcon} ${maritalIcon}</span>
+                <a href="#${id}" style="text-decoration:none; color:inherit;">
+                    <span class="name">${label}</span>
+                    <span class="summary">${summary}${age ? ' • ' + age : ''}</span>
+                    <span class="icons">${genderIcon} ${maritalIcon}</span>
+                </a>
             </div>
         `
     }

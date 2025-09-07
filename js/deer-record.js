@@ -314,6 +314,19 @@ export default class DeerReport {
                         target: entity["@id"]?.replace(/https?:/,'https:'),
                         body: {}
                     }
+                    
+                    // Add FOAF context for nickname fields or forms
+                    let inputKey = input.getAttribute(DEER.KEY)
+                    if (inputKey === "nick" || this.type === "nick") {
+                        annotation["@context"] = [
+                            "http://www.w3.org/ns/anno.jsonld",
+                            {
+                                "foaf": "http://xmlns.com/foaf/0.1/",
+                                "prov": "http://www.w3.org/ns/prov#"
+                            }
+                        ]
+                    }
+                    
                     if(creatorId) { annotation.creator = creatorId?.replace(/https?:/,'https:') }
                     if(motivation) { annotation.motivation = motivation }
                     if(evidence) { annotation.evidence = evidence }
