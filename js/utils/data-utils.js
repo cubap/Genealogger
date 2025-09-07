@@ -176,7 +176,7 @@ export async function expand(entity, matchOn = ["__rerum.generatedBy", "creator"
     const obj = await fetchWithCache(findId, forceRefresh)
 
     try {
-        const annos = await findByTargetId(findId)
+        const annos = await findByTargetId(findId, matchOn, forceRefresh)
         for (const anno of annos) {
             let body = anno.body
             if (!body) continue

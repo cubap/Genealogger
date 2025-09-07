@@ -18,20 +18,20 @@ class DeerNicknameEditor extends HTMLElement {
 
     async attributeChangedCallback(name, oldValue, newValue) {
         if (name === config.ID && oldValue !== newValue) {
-            await this.loadPerson()
+            await this.loadPerson(true)
             this.render()
         }
     }
 
-    async loadPerson() {
+    async loadPerson(forceRefresh = false) {
         const id = this.getAttribute(config.ID)
         if (id) {
-            this.person = await expand(id)
+            this.person = await expand(id, ["__rerum.generatedBy", "creator"], forceRefresh)
         }
     }
 
     render() {
-        const nickname = getValue(this.person.nick) || getValue(this.person.nickname) || ''
+        const nickname = this.getNickname()
         const personName = getValue(this.person.name) || 'Unknown'
         const personId = this.getAttribute(config.ID)
         
@@ -146,17 +146,17 @@ class DeerNicknameEditor extends HTMLElement {
         // Add a small delay to ensure the form has actually been processed
         setTimeout(() => {
             this.isEditing = false
-            // Reload the person data to get the updated nickname
-            this.loadPerson().then(() => {
-                this.render()
-                this.showFeedback('Nickname saved successfully!', 'success')
-            })
-            
-            // Clear cache so other components refresh - the DEER event handling will take care of this
+            // Clear cache so other components refresh
             const personId = this.getAttribute(config.ID)
             if (personId) {
                 localStorage.removeItem(personId)
             }
+            
+            // Reload the person data with force refresh to get the updated nickname
+            this.loadPerson(true).then(() => {
+                this.render()
+                this.showFeedback('Nickname saved successfully!', 'success')
+            })
         }, 100)
     }
 
@@ -194,7 +194,7 @@ class DeerNicknameEditor extends HTMLElement {
 
     // Public method to get current nickname
     getNickname() {
-        return getValue(this.person["foaf:nick"]) || getValue(this.person.nickname) || ''
+        return getValue(this.person.nick ?? this.person.nickname)
     }
 }
 
