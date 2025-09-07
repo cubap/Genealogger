@@ -164,7 +164,7 @@ export default class DeerReport {
                                             if (el.getAttribute(DEER.INPUTTYPE)) {
                                                 //Only an element noted as a DEER.INPUTTYPE would have this kind of annotation behind it.  For others, it is an error.  
                                                 if (annoBodyObjectType === "" || el.getAttribute(DEER.INPUTTYPE) !== annoBodyObjectType) {
-                                                    //The HTML input should note the same type of container as the annotation so helper functiions can determine if it is a supported in DEER.CONTAINERS
+                                                    //The HTML input should note the same type of container as the annotation so helper functions can determine if it is a supported in DEER.CONTAINERS
                                                     warning("Container type mismatch!.  See attribute '" + DEER.INPUTTYPE + "' on element " + el.outerHTML + "." +
                                                         " The element is now dirty and will overwrite the type noted in the annotation seen below upon form submission." +
                                                         " If the type of the annotation body is not a supported type then DEER will not be able to get the array of values.", obj[deerKeyValue])

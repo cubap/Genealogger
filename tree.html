@@ -5,39 +5,39 @@ To change this template file, choose Tools | Templates
 and open the template in the editor.
 -->
 <html>
-    <head>
-        <title>Genealogger - Tree</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
-        <script src="js/deer.js" type="module"></script>
-    </head>
-    <body>
-        <a href="./">home</a>
-        <h3><deer-label id="personBanner" deer-key="name">Label</deer-label></h3>
-        <deer-children-list id="childrenList"></deer-children-list>
-        <p>
-            View tree for person. <a href="javascript:location='?showall=true'+location.hash;">showall</a>
-        </p>
 
-        <deer-tree id="treeDetail">Loading tree</deer-tree>
+<head>
+    <title>Genealogger - Tree</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
+    <script src="js/deer.js" type="module"></script>
+</head>
 
-        <deer-svg-tree id="svgTree"></deer-svg-tree>
+<body>
+    <a href="./">home</a>
+    <h3><deer-label id="personBanner" deer-key="name">Label</deer-label></h3>
+    <deer-children-list id="childrenList"></deer-children-list>
 
-        <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                let params = new URLSearchParams(location.search)
-                window.onhashchange()
-            })
-        </script>
-        <script>
-            window.onhashchange = () => {
-                let personID = window.location.hash.substr(1)
-                treeDetail.setAttribute("deer-id", personID)
-                svgTree.setAttribute("deer-id", personID)
-                personBanner.setAttribute("deer-id", personID)
-                childrenList.setAttribute("deer-id", personID)
-            }
-        </script>
-    </body>
+    <deer-svg-tree id="svgTree"></deer-svg-tree>
+
+    <deer-tree id="treeDetail">Loading tree</deer-tree>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            let params = new URLSearchParams(location.search)
+            window.onhashchange()
+        })
+    </script>
+    <script>
+        window.onhashchange = () => {
+            let personID = window.location.hash.substr(1)
+            treeDetail.setAttribute("deer-id", personID)
+            svgTree.setAttribute("deer-id", personID)
+            personBanner.setAttribute("deer-id", personID)
+            childrenList.setAttribute("deer-id", personID)
+        }
+    </script>
+</body>
+
 </html>

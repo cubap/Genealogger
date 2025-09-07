@@ -44,76 +44,70 @@ class DeerSvgTree extends HTMLElement {
         const g = svg.append('g')
 
         const root = d3.hierarchy(data)
-        const treeLayout = d3.tree().nodeSize([15, 250]) 
-        treeLayout(root)
-
-        // Links
-        g.selectAll('.link')
-            .data(root.links())
-            .join('line')
-            .attr('class', 'link')
-            .attr('x1', d => d.source.y) 
-            .attr('y1', d => d.source.x)
-            .attr('x2', d => d.target.y)
-            .attr('y2', d => d.target.x)
-            .attr('stroke', '#555')
-            .attr('stroke-width', 1.5)
-
-        // Nodes
-        const nodes = g.selectAll('.node')
-            .data(root.descendants())
-            .join('g')
-            .attr('class', 'node')
-            .attr('transform', d => `translate(${d.y},${d.x})`) 
-            .call(d3.drag()
-                .on('start', (event) => {
-                    svg.style('cursor', 'grabbing')
-                    event.subject.fx = event.subject.x
-                    event.subject.fy = event.subject.y
+        
+        // Dynamic tree layout with focus-based angle adjustment
+        let focusedNode = root // Start with root as focused
+        let treeLayout = d3.tree().nodeSize([15, 250])
+        
+        // Function to create a custom tree layout with dynamic angles
+        const createDynamicLayout = (focusNode) => {
+            return d3.tree()
+                .nodeSize([15, 250])
+                .separation((a, b) => {
+                    // Calculate separation based on distance from focus
+                    const focusDepth = focusNode.depth || 0
+                    const aDistance = Math.abs(a.depth - focusDepth)
+                    const bDistance = Math.abs(b.depth - focusDepth)
+                    
+                    // Wider separation for nodes closer to focus, tighter for distant ones
+                    const baseSeparation = a.parent === b.parent ? 1 : 2
+                    const focusMultiplier = Math.max(0.5, 2 - Math.max(aDistance, bDistance) * 0.3)
+                    
+                    return baseSeparation * focusMultiplier
                 })
-                .on('end', () => {
-                    svg.style('cursor', 'grab')
-                })
-            )
-
-        nodes.each(function (d) {
-            d.data.name
-                ? d3.select(this)
-                    .append('rect') // Append rectangle for the node
-                    .attr('width', 150)
-                    .attr('height', 30)
-                    .attr('x', -75)
-                    .attr('y', -15)
-                    .attr('fill', '#999')
-                    .attr('stroke', '#555')
-                    .attr('stroke-width', 2) &&
-                d3.select(this)
-                    .append('text') // Append text for nodes with names
-                    .attr('text-anchor', 'middle')
-                    .attr('alignment-baseline', 'middle')
-                    .text(d.data.name)
-                    .style('font-size', '12px')
-                    .style('font-family', 'Arial, sans-serif')
-                    .style('fill', '#fff')
-                : d3.select(this)
-                    .append('foreignObject') // Append foreignObject for nodes without names
-                    .attr('width', 150)
-                    .attr('height', 50)
-                    .attr('x', 0)
-                    .attr('y', -15)
-                    .append('xhtml:div')
-                    .attr('class', 'void-parent')
-                    .html(d => {
-                        let buttons = ''
-                        if (d.data.hasOwnProperty('hasFather')) {
-                            buttons += `[ <a href="parents.html?#${d.data.id}">add father</a> ] `
-                        }
-                        if (d.data.hasOwnProperty('hasMother')) {
-                            buttons += `[ <a href="parents.html?#${d.data.id}">add mother</a> ]`
-                        }
-                        return buttons
-                    })
-        })
+        }
+        
+        // Function to apply custom positioning based on focus
+        const applyFocusLayout = (root, focusNode) => {
+            treeLayout = createDynamicLayout(focusNode)
+            treeLayout(root)
+            
+            // Apply additional angle adjustments for descendants of focused node
+            root.descendants().forEach(d => {
+                if (d === focusNode) return
+                
+                // Calculate relationship to focus node
+                const isAncestor = d.ancestors().includes(focusNode)
+                const isDescendant = focusNode.ancestors().includes(d)
+                const depthFromFocus = Math.abs(d.depth - focusNode.depth)
+                
+                if (isDescendant) {
+                    // Nodes that are ancestors of focus get pushed to the right and compressed
+                    const compressionFactor = 0.7 + (depthFromFocus * 0.1)
+                    d.y = d.y * compressionFactor + (depthFromFocus * 50)
+                    
+                    // Slight vertical compression for non-focused branches
+                    if (d !== focusNode.parent) {
+                        d.x = d.x * 0.8
+                    }
+                } else if (isAncestor) {
+                    // Descendants of focus get wider angles
+                    const expansionFactor = 1.3 - (depthFromFocus * 0.1)
+                    d.x = d.x * expansionFactor
+                    
+                    // Slight forward positioning for focused descendants
+                    d.y = d.y * 0.95
+                } else {
+                    // Sibling branches get moderate compression
+                    const siblingFactor = 0.85
+                    d.x = d.x * siblingFactor
+                    d.y = d.y * 1.1
+                }
+            })
+        }
+        
+        // Initial layout
+        applyFocusLayout(root, focusedNode)
 
         // --- Tooltip setup ---
         const tooltip = d3.select(this)
@@ -135,6 +129,9 @@ class DeerSvgTree extends HTMLElement {
         const MAX_INITIAL_DEPTH = 2
         let expandedNodes = new Set()
         function updateTree() {
+            // Recalculate layout with current focus
+            applyFocusLayout(root, focusedNode)
+            
             // Filter descendants to only those within expandedNodes or MAX_INITIAL_DEPTH
             const visibleNodes = root.descendants().filter(d => {
                 // Always show all ancestors of expanded nodes
@@ -156,7 +153,12 @@ class DeerSvgTree extends HTMLElement {
                 // Show link if both source and target are visible
                 return visibleNodes.includes(l.source) && visibleNodes.includes(l.target)
             })
-            // Render links
+            
+            // Render links with smooth transition
+            const linkTransition = d3.transition()
+                .duration(500)
+                .ease(d3.easeQuadInOut)
+                
             g.selectAll('.link').remove()
             g.selectAll('.link')
                 .data(visibleLinks)
@@ -168,35 +170,53 @@ class DeerSvgTree extends HTMLElement {
                 .attr('y2', d => d.target.x)
                 .attr('stroke', '#555')
                 .attr('stroke-width', 1.5)
-            // Render nodes
+                .style('opacity', 0)
+                .transition(linkTransition)
+                .style('opacity', 1)
+                
+            // Render nodes with smooth transition
+            const nodeTransition = d3.transition()
+                .duration(500)
+                .ease(d3.easeQuadInOut)
+                
             g.selectAll('.node').remove()
             const nodes = g.selectAll('.node')
                 .data(visibleNodes, d => d.data.id)
                 .join('g')
                 .attr('class', 'node')
                 .attr('transform', d => `translate(${d.y},${d.x})`)
-                .call(d3.drag()
-                    .on('start', (event) => {
-                        svg.style('cursor', 'grabbing')
-                        event.subject.fx = event.subject.x
-                        event.subject.fy = event.subject.y
-                    })
-                    .on('end', () => {
-                        svg.style('cursor', 'grab')
-                    })
-                )
+                .style('opacity', 0)
+            
+            nodes.transition(nodeTransition)
+                .style('opacity', 1)
+            
+            // Add click handlers to nodes
+            const self = this
+            nodes.on('click', function(event, d) {
+                console.log('Node clicked:', d.data.name, d)
+                event.stopPropagation()
+                
+                // Update focus node
+                focusedNode = d
+                
+                // Re-render tree with new focus
+                updateTree()
+            })
             nodes.each(function (d) {
-                d.data.name
-                    ? d3.select(this)
+                const nodeElement = d3.select(this)
+                
+                if (d.data.name) {
+                    nodeElement
                         .append('rect')
                         .attr('width', 150)
                         .attr('height', 30)
                         .attr('x', -75)
                         .attr('y', -15)
-                        .attr('fill', '#999')
+                        .attr('fill', d === focusedNode ? '#1976d2' : '#999')
                         .attr('stroke', '#555')
-                        .attr('stroke-width', 2) &&
-                    d3.select(this)
+                        .attr('stroke-width', 2)
+                    
+                    nodeElement
                         .append('text')
                         .attr('text-anchor', 'middle')
                         .attr('alignment-baseline', 'middle')
@@ -204,7 +224,8 @@ class DeerSvgTree extends HTMLElement {
                         .style('font-size', '12px')
                         .style('font-family', 'Arial, sans-serif')
                         .style('fill', '#fff')
-                    : d3.select(this)
+                } else {
+                    nodeElement
                         .append('foreignObject')
                         .attr('width', 150)
                         .attr('height', 50)
@@ -222,30 +243,60 @@ class DeerSvgTree extends HTMLElement {
                             }
                             return buttons
                         })
+                }
             })
-            // --- Node click for lazy expand ---
+            
+            // Re-add click handlers for focus change and expansion
             nodes.on('click', async function(event, d) {
                 event.stopPropagation()
-                // Centering logic (same as before)
+                
+                // Update the focused node
+                focusedNode = d
+                
+                // Lazy expand: if not already expanded, expand this node
+                if (!expandedNodes.has(d.data.id)) {
+                    expandedNodes.add(d.data.id)
+                    updateTree()
+                }
+                
+                // Recalculate layout with new focus
+                applyFocusLayout(root, focusedNode)
+                
+                // Smooth transition to new layout
+                const transition = d3.transition()
+                    .duration(750)
+                    .ease(d3.easeQuadInOut)
+                
+                // Update link positions with transition
+                g.selectAll('.link')
+                    .transition(transition)
+                    .attr('x1', d => d.source.y)
+                    .attr('y1', d => d.source.x)
+                    .attr('x2', d => d.target.y)
+                    .attr('y2', d => d.target.x)
+                
+                // Update node positions with transition
+                g.selectAll('.node')
+                    .transition(transition)
+                    .attr('transform', d => `translate(${d.y},${d.x})`)
+                
+                // Centering logic - focus on the clicked node
                 const x = d.x
                 const y = d.y
                 const scale = 1
                 const svgHeight = +svg.attr('height')
                 const translate = [-y * scale, -svgHeight * 0.2 - x * scale]
+                
                 svg.transition()
-                    .duration(500)
+                    .duration(750)
+                    .ease(d3.easeQuadInOut)
                     .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale))
-                // Lazy expand: if not already expanded, expand this node
-                if (!expandedNodes.has(d.data.id)) {
-                    expandedNodes.add(d.data.id)
-                    updateTree()
-                } else {
-                    // Highlight the active node after updateTree
-                    setTimeout(() => {
-                        g.selectAll('.node rect').attr('fill', '#999')
-                        d3.select(this).select('rect').attr('fill', '#1976d2')
-                    }, 0)
-                }
+                
+                // Update highlights
+                setTimeout(() => {
+                    g.selectAll('.node rect').attr('fill', '#999')
+                    d3.select(this).select('rect').attr('fill', '#1976d2')
+                }, 750)
             })
             // --- Tooltip events ---
             nodes.on('mouseover', async function(event, d) {
@@ -291,6 +342,7 @@ class DeerSvgTree extends HTMLElement {
         const zoom = d3.zoom()
             .scaleExtent([0.5, 2])
             .on('zoom', (event) => {
+                console.log('Zoom event triggered:', event.transform)
                 g.attr('transform', event.transform)
                 // On pan/zoom, add all visible nodes to expandedNodes
                 const visibleNodes = root.descendants().filter(d => {
@@ -316,27 +368,8 @@ class DeerSvgTree extends HTMLElement {
                 }
                 if (changed) updateTree()
             })
+        console.log('Setting up zoom on SVG')
         svg.call(zoom)
-
-        // Center and zoom on node when clicked
-        nodes.on('click', function(event, d) {
-            event.stopPropagation()
-            // Node position in tree layout (d.x vertical, d.y horizontal)
-            const x = d.x
-            const y = d.y
-            // Center the node at 30% from the top (not the vertical center)
-            const scale = 1
-            const svgHeight = +svg.attr('height')
-            const yOffset = svgHeight * 0.3 // 30% from the top
-            // Correction: yOffset should be positive (down from top), so use -svgHeight * 0.2 for 30% from top
-            const translate = [-y * scale, -svgHeight * 0.2 - x * scale]
-            svg.transition()
-                .duration(500)
-                .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale))
-            // Highlight the active node
-            nodes.select('rect').attr('fill', '#999') // reset all
-            d3.select(this).select('rect').attr('fill', '#1976d2') // active color
-        })
 
         // Add refresh button for cache invalidation
         const refreshBtn = document.createElement('button')
