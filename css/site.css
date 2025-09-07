@@ -165,6 +165,45 @@ body > a[href="./"]:hover {
     margin-bottom: 1em;
 }
 
+/* Typeahead Filter Styles */
+.typeahead-filter {
+    margin: 1rem auto 1rem auto;
+    max-width: 700px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    padding: 1rem;
+}
+
+.typeahead-input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fafafa;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.typeahead-input:focus {
+    outline: none;
+    border-color: #1976d2;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.typeahead-input::placeholder {
+    color: #666;
+    font-style: italic;
+}
+
+/* Initially hidden until list loads */
+deer-typeahead-filter {
+    display: none;
+}
+
 /* Responsive */
 @media (max-width: 800px) {
   deer-list, header, nav, main, footer {

@@ -63,6 +63,14 @@ class DeerListTemplate extends HTMLElement {
 
         if (!itemList.length) {
             this.innerHTML = `<span>No items to display</span>`
+            // Dispatch event even when no items
+            this.dispatchEvent(new CustomEvent('deer-list-rendered', {
+                detail: { 
+                    items: [],
+                    element: this 
+                },
+                bubbles: true
+            }))
             return
         }
 
@@ -81,6 +89,15 @@ class DeerListTemplate extends HTMLElement {
         })
         tmpl += `</ul>`
         this.innerHTML = tmpl
+        
+        // Dispatch custom event when list is rendered
+        this.dispatchEvent(new CustomEvent('deer-list-rendered', {
+            detail: { 
+                items: itemList,
+                element: this 
+            },
+            bubbles: true
+        }))
     }
 }
 

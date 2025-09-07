@@ -34,6 +34,9 @@ import { default as renderer, initializeDeerViews } from './deer-render.js'
 // CDN at https://centerfordigitalhumanities.github.io/deer/releases/
 import { default as record, initializeDeerForms } from './deer-record.js'
 
+// Import custom components
+import './components/deer-typeahead-filter.js'
+
 // fire up the element detection as needed
 try {
     initializeDeerViews(DEER)
