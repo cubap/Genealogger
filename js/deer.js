@@ -53,5 +53,3 @@ document.addEventListener('deer-updated', (event) => {
         localStorage.removeItem(event.detail['@id'])
     }
 })
-
-
