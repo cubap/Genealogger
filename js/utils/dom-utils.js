@@ -1,6 +1,6 @@
 // DOM utility functions for Genealogger
 
-export function assertElementValue(elem, val, mapsToAnno, DEER, warning) {
+export function assertElementValue(elem, val, mapsToAnno, DEER) {
     if (elem.type === "hidden") {
         if (elem.hasAttribute("value") && elem.value !== undefined) {
             if (!mapsToAnno || elem.value !== val) {

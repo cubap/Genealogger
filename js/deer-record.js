@@ -103,6 +103,8 @@ export default class DeerReport {
                         for (let i = 0; i < this.inputs.length; i++) {
                             const el = this.inputs[i]
                             const deerKeyValue = el.getAttribute(DEER.KEY)
+                            let assertedValue = ""
+                            let mapsToAnno = false
                             if (deerKeyValue) {
                                 if (obj.hasOwnProperty(deerKeyValue)) {
                                     if(obj[deerKeyValue].evidence)el.setAttribute(DEER.EVIDENCE, obj[deerKeyValue].evidence)
@@ -199,7 +201,7 @@ export default class DeerReport {
                                         assertedValue = ""
                                     }
                                 }
-                                assertElementValue(el, assertedValue, mapsToAnno)
+                                assertElementValue(el, assertedValue, mapsToAnno, DEER)
                             }
                         }
                     } catch (err) { console.log(err) }

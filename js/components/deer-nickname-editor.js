@@ -86,17 +86,38 @@ class DeerNicknameEditor extends HTMLElement {
             cancelBtn.addEventListener('click', () => this.cancelEditing())
         }
 
-        if (form) {
-            // Announce new form to DEER so it gets proper submit handlers
-            const event = new CustomEvent(config.EVENTS.NEW_FORM, {
-                detail: { set: [form] }
-            })
-            document.dispatchEvent(event)
+        // Only set up form handling if we're in edit mode
+        if (form && this.isEditing) {
+            // Listen for successful data update
+            const personId = this.getAttribute(config.ID)
+            const updateHandler = (event) => {
+                if (event.detail?.target === personId || event.detail?.['@id'] === personId) {
+                    document.removeEventListener(config.EVENTS.UPDATED, updateHandler)
+                    this.handleSuccessfulSave()
+                }
+            }
+            document.addEventListener(config.EVENTS.UPDATED, updateHandler)
             
-            // Listen for successful form submission from DEER
-            form.addEventListener(config.EVENTS.FORM_RENDERED, (event) => {
-                this.handleSuccessfulSave()
-            })
+            // Announce new form to DEER when user starts typing or focuses input
+            let formAnnounced = false
+            const announceForm = () => {
+                if (!formAnnounced) {
+                    formAnnounced = true
+                    const event = new CustomEvent(config.EVENTS.NEW_FORM, {
+                        detail: { set: [form] }
+                    })
+                    document.dispatchEvent(event)
+                }
+            }
+            
+            // Set up dirty tracking for the input
+            if (input) {
+                input.addEventListener('input', (e) => {
+                    e.target.$isDirty = true
+                    announceForm() // Announce form when user starts typing
+                })
+                input.addEventListener('focus', announceForm, { once: true })
+            }
         }
 
         if (input) {
@@ -122,18 +143,21 @@ class DeerNicknameEditor extends HTMLElement {
     }
 
     handleSuccessfulSave() {
-        this.isEditing = false
-        // Reload the person data to get the updated nickname
-        this.loadPerson().then(() => {
-            this.render()
-            this.showFeedback('Nickname saved successfully!', 'success')
-        })
-        
-        // Clear cache so other components refresh - the DEER event handling will take care of this
-        const personId = this.getAttribute(config.ID)
-        if (personId) {
-            localStorage.removeItem(personId)
-        }
+        // Add a small delay to ensure the form has actually been processed
+        setTimeout(() => {
+            this.isEditing = false
+            // Reload the person data to get the updated nickname
+            this.loadPerson().then(() => {
+                this.render()
+                this.showFeedback('Nickname saved successfully!', 'success')
+            })
+            
+            // Clear cache so other components refresh - the DEER event handling will take care of this
+            const personId = this.getAttribute(config.ID)
+            if (personId) {
+                localStorage.removeItem(personId)
+            }
+        }, 100)
     }
 
     showFeedback(message, type = 'info') {
