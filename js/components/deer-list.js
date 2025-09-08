@@ -74,21 +74,23 @@ class DeerListTemplate extends HTMLElement {
             return
         }
 
+        const options = JSON.parse(this.getAttribute('data-options') ?? '{}')
         // Use deer-link attribute if present, fallback to data-options
         let resolvedLink = this.getAttribute('deer-link')
         if (!resolvedLink) {
-            const options = JSON.parse(this.getAttribute('data-options') ?? '{}')
             resolvedLink = options.link || ''
         }
         let tmpl = `<h2>${getLabel(obj)}</h2><ul>`
         itemList.forEach((val, index) => {
             const name = getLabel(val, val.type ?? val['@type'] ?? index)
-            tmpl += val["@id"] && resolvedLink
-                ? `<li ${config.ID}="${val["@id"]}"><a href="${resolvedLink}${val["@id"]}">${name}</a></li>`
-                : `<li ${config.ID}="${val["@id"]}">${name}</li>`
+            tmpl += (val["@id"] ?? val.id) && resolvedLink
+                ? `<li ${config.ID}="${val["@id"] ?? val.id}"><a href="${resolvedLink}${val["@id"] ?? val.id}">${name}</a></li>`
+                : `<li ${config.ID}="${val["@id"] ?? val.id}">${name}</li>`
         })
         tmpl += `</ul>`
         this.innerHTML = tmpl
+
+        this.checkForUpdatedLabels(itemList)
         
         // Dispatch custom event when list is rendered
         this.dispatchEvent(new CustomEvent('deer-list-rendered', {
@@ -98,6 +100,49 @@ class DeerListTemplate extends HTMLElement {
             },
             bubbles: true
         }))
+    }
+
+    checkForUpdatedLabels(items) {
+        // gather all the deer-ids from the list items
+        const ids = items.map(item => item['@id'] || item.id).filter(id => id)
+        if (ids.length === 0) return
+        // query for Annotations that target these ids and have body with nick updates
+        const queryObj = {
+            "target": { "$in": ids },
+            "body.nick": { "$exists": true }
+        }
+        fetch(`${config.URLS.QUERY}?limit=100`, {
+            method: "POST",
+            mode: "cors",
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(queryObj)
+        }).then(res => res.json()).then(data => {
+            // match the annotations to the list items and update the labels
+            const nickMap = {}
+            data.forEach(annotation => {
+                const targetId = getValue(annotation.target)
+                if (targetId && ids.includes(targetId)) {
+                    nickMap[targetId] = annotation.body.nick
+                }
+            })
+            items.forEach(item => {
+                const itemId = item['@id'] || item.id
+                if (nickMap[itemId]) {
+                    item.label = nickMap[itemId]
+                }
+            })
+            // replace the text nodes with updated labels
+            const listElements = this.querySelectorAll('li')
+            listElements.forEach(li => {
+                const liId = li.getAttribute(config.ID)
+                if (nickMap[liId]) {
+                    const link = li.querySelector('a')
+                    if (link) {
+                        link.textContent = getValue(nickMap[liId])
+                    }
+                }
+            })
+        }).catch(() => {})
     }
 }
 
