@@ -9,8 +9,10 @@
  * @see tiny.rerum.io
  */
 
-import { default as UTILS } from './deer-utils.js'
 import { default as config } from './deer-config.js'
+import { expand, getValue, getArrayFromObj } from './utils/data-utils.js'
+import { warning, broadcast, assertElementValue } from './utils/dom-utils.js'
+import { stringifyArray } from './utils/string-utils.js'
 
 const changeLoader = new MutationObserver(renderChange)
 var DEER = config
@@ -60,8 +62,8 @@ async function renderChange(mutationsList) {
 
 export default class DeerReport {
     /**
-     * @description Defines a JavaScript class that sets up DEER (Declarative Event-Driven
-     * Annotation Rendering) annotation handling for an HTML form. It listens to DOM
+     * @description Defines a JavaScript class that sets up DEER (Data Entry and Exhibition
+     * for RERUM) annotation handling for an HTML form. It listens to DOM
      * events, handles value retrieval and validation, and broadcasts form rendering events.
      * 
      * @param {object} elem - HTML element for which the script is checking and setting
@@ -95,35 +97,24 @@ export default class DeerReport {
         elem.onsubmit = this.processRecord.bind(this)
 
         if (this.id) {
-            //Do we want to expand for all types?
-            UTILS.expand({ "@id": this.id })
-                .then((function (obj) {
+            expand({ "@id": this.id })
+                .then((obj) => {
                     try {
-                        let inputElems = Array.from(this.inputs)
-                        let flatKeys = inputElems.map(input => input.getAttribute(DEER.KEY))
-                        for (let i = 0; i < inputElems.length; i++) {
-                            let el = inputElems[i]
-                            let deerKeyValue = (el.hasAttribute(DEER.KEY)) ? el.getAttribute(DEER.KEY) : ""
+                        for (let i = 0; i < this.inputs.length; i++) {
+                            const el = this.inputs[i]
+                            const deerKeyValue = el.getAttribute(DEER.KEY)
+                            let assertedValue = ""
                             let mapsToAnno = false
                             if (deerKeyValue) {
-                                //Then this is a DEER form input.
-                                el.addEventListener('input', (e) => e.target.$isDirty = true)
-                                let assertedValue = ""
-                                if (flatKeys.indexOf(deerKeyValue) !== i) {
-                                    UTILS.warning("Duplicate input " + DEER.KEY + " attribute value '" + deerKeyValue + "' detected in form.  This input will be ignored upon form submission and only the first instance will be respected.  See duplicate below.", el)
-                                    //Don't skip the input though, let it recieve all warnings and errors per usual in case this happens to be the one the dev means to keep.
-                                }
                                 if (obj.hasOwnProperty(deerKeyValue)) {
                                     if(obj[deerKeyValue].evidence)el.setAttribute(DEER.EVIDENCE, obj[deerKeyValue].evidence)
                                     if(obj[deerKeyValue].motivation)el.setAttribute(DEER.MOTIVATION, obj[deerKeyValue].motivation)
                                     if(obj[deerKeyValue].creator)el.setAttribute(DEER.ATTRIBUTION, obj[deerKeyValue].creator)
 
-                                    //Then there is a key on this object that maps to the input.  
-                                    //It is either an annotation or was part of the object directly.  If it has a 'source' property, we assume it is an annotation.
-                                    assertedValue = UTILS.getValue(obj[deerKeyValue])
+                                    assertedValue = getValue(obj[deerKeyValue])
                                     mapsToAnno = (typeof obj[deerKeyValue] === "object" && obj[deerKeyValue].hasOwnProperty("source"))
                                     if (mapsToAnno) {
-                                        el.setAttribute(DEER.SOURCE, UTILS.getValue(obj[deerKeyValue].source, "citationSource"))
+                                        el.setAttribute(DEER.SOURCE, getValue(obj[deerKeyValue].source, "citationSource"))
                                     }
                                     let annoBodyObjectType = (typeof assertedValue === "object") ? assertedValue.type || assertedValue["@type"] || "" : ""
                                     let delim = el.getAttribute(DEER.ARRAYDELIMETER) || DEER.DELIMETERDEFAULT || ","
@@ -137,32 +128,32 @@ export default class DeerReport {
                                          * If no annotations are found, DEER will aribitrarily pick the last string or number encountered.   
                                          * DEER does not technically support this situation, but can make a best guess and help it along...
                                          */
-                                        UTILS.warning("There are multiple possible values for key '" + deerKeyValue + "'. See below. ", assertedValue)
+                                        warning("There are multiple possible values for key '" + deerKeyValue + "'. See below. ", assertedValue)
                                         let arbitraryAssertedValue = ""
                                         for (let entry of assertedValue) {
                                             if (["string", "number"].indexOf(typeof entry) > -1) {
                                                 //We found it and understand it, but we preference annotation objects so look at the rest of the entries.
                                                 //Consequently, if no annotations are found, the last string/number entry will be the one DEER uses.
                                                 mapsToAnno = false
-                                                el.setAttribute(DEER.SOURCE, UTILS.getValue(entry.source, "citationSource"))
-                                                assertedValue = arbitraryAssertedValue = UTILS.getValue(entry)
+                                                el.setAttribute(DEER.SOURCE, getValue(entry.source, "citationSource"))
+                                                assertedValue = arbitraryAssertedValue = getValue(entry)
                                             } else if (typeof entry === "object") {
                                                 if (entry.hasOwnProperty(deerKeyValue) && entry[deerKeyValue].hasOwnProperty("source")) {
                                                     //Then this is an object like {deerKeyValue:{value:"hopefully", source:"anno/123"}} and can be preferenced
                                                     mapsToAnno = true
-                                                    el.setAttribute(DEER.SOURCE, UTILS.getValue(entry.source, "citationSource"))
-                                                    assertedValue = arbitraryAssertedValue = UTILS.getValue(entry[deerKeyValue])
+                                                    el.setAttribute(DEER.SOURCE, getValue(entry.source, "citationSource"))
+                                                    assertedValue = arbitraryAssertedValue = getValue(entry[deerKeyValue])
                                                     break
                                                 } else if (entry.hasOwnProperty("source")) {
                                                     //Then this is an object like {value:"hopefully", source:"anno/123"} and can be preferenced
                                                     mapsToAnno = true
-                                                    el.setAttribute(DEER.SOURCE, UTILS.getValue(entry.source, "citationSource"))
-                                                    assertedValue = arbitraryAssertedValue = UTILS.getValue(entry)
+                                                    el.setAttribute(DEER.SOURCE, getValue(entry.source, "citationSource"))
+                                                    assertedValue = arbitraryAssertedValue = getValue(entry)
                                                     break
                                                 }
                                             }
                                         }
-                                        if (arbitraryAssertedValue) { UTILS.warning("DEER arbitrarily chose the value '" + arbitraryAssertedValue + "'.") } else {
+                                        if (arbitraryAssertedValue) { warning("DEER arbitrarily chose the value '" + arbitraryAssertedValue + "'.") } else {
                                             console.error("DEER did not understand any of these values.  Therefore, the value will be an empty string.")
                                             assertedValue = ""
                                         }
@@ -173,8 +164,8 @@ export default class DeerReport {
                                             if (el.getAttribute(DEER.INPUTTYPE)) {
                                                 //Only an element noted as a DEER.INPUTTYPE would have this kind of annotation behind it.  For others, it is an error.  
                                                 if (annoBodyObjectType === "" || el.getAttribute(DEER.INPUTTYPE) !== annoBodyObjectType) {
-                                                    //The HTML input should note the same type of container as the annotation so helper functiions can determine if it is a supported in DEER.CONTAINERS
-                                                    UTILS.warning("Container type mismatch!.  See attribute '" + DEER.INPUTTYPE + "' on element " + el.outerHTML + "." +
+                                                    //The HTML input should note the same type of container as the annotation so helper functions can determine if it is a supported in DEER.CONTAINERS
+                                                    warning("Container type mismatch!.  See attribute '" + DEER.INPUTTYPE + "' on element " + el.outerHTML + "." +
                                                         " The element is now dirty and will overwrite the type noted in the annotation seen below upon form submission." +
                                                         " If the type of the annotation body is not a supported type then DEER will not be able to get the array of values.", obj[deerKeyValue])
                                                 }
@@ -185,8 +176,8 @@ export default class DeerReport {
                                                         assertedValue = ""
                                                     }
                                                 } else {
-                                                    arrayOfValues = UTILS.getArrayFromObj(assertedValue, el)
-                                                    assertedValue = UTILS.stringifyArray(arrayOfValues, delim)
+                                                    arrayOfValues = getArrayFromObj(assertedValue, el)
+                                                    assertedValue = stringifyArray(arrayOfValues, delim)
                                                 }
                                             } else {
                                                 //This should have been a string or number.  We do not support whatever was meant to be here.  
@@ -210,7 +201,7 @@ export default class DeerReport {
                                         assertedValue = ""
                                     }
                                 }
-                                UTILS.assertElementValue(el, assertedValue, mapsToAnno)
+                                assertElementValue(el, assertedValue, mapsToAnno, DEER)
                             }
                         }
                     } catch (err) { console.log(err) }
@@ -224,11 +215,11 @@ export default class DeerReport {
                          *  You will notice that the "deer-view-rendered" events all happen before this event is fired on respective HTML pages.
                          *  This lets the script know forms are open for dynamic rendering interaction, like pre-filling or pre-selecting values.
                          */
-                        UTILS.broadcast(undefined, DEER.EVENTS.FORM_RENDERED, elem, obj)
+                        broadcast(undefined, DEER.EVENTS.FORM_RENDERED, elem, obj)
                     }, 0)
                     //Note this is deprecated for the "deer-form-rendered" event.
-                    UTILS.broadcast(undefined, DEER.EVENTS.LOADED, elem, obj)
-                }).bind(this))
+                    broadcast(undefined, DEER.EVENTS.LOADED, elem, obj)
+                })
                 .then(() => elem.click())
         } else {
             Array.from(this.inputs).forEach(inpt => {
@@ -260,7 +251,7 @@ export default class DeerReport {
         this.type = this.elem.getAttribute(DEER.TYPE)
 
         if (!this.$isDirty) {
-            UTILS.warning(event.target.id + " form submitted unchanged.")
+            warning(event.target.id + " form submitted unchanged.")
         }
         if (this.elem.getAttribute(DEER.ITEMTYPE) === "simple") {
             return this.simpleUpsert(event).then(entity => {
@@ -277,7 +268,7 @@ export default class DeerReport {
             try {
                 record[p] = this.elem.querySelector("[" + DEER.KEY + "='" + p + "']").value
             } catch (err) {
-                UTILS.warning(err, null)
+                warning(err, null)
             }
         }
         let formAction
@@ -295,7 +286,7 @@ export default class DeerReport {
             })
                 .then(response => response.json())
                 .then(data => {
-                    UTILS.broadcast(undefined, DEER.EVENTS.CREATED, self.elem, data.new_obj_state)
+                    broadcast(undefined, DEER.EVENTS.CREATED, self.elem, data.new_obj_state)
                     return data.new_obj_state
                 })
                 .catch(err => { })
@@ -310,7 +301,7 @@ export default class DeerReport {
             annotations = annotations.filter((el, i) => {
                 //Throw a soft error if we detect duplicate deer-key entries, and only respect the first one.
                 if (flatKeys.indexOf(el.getAttribute(DEER.KEY)) !== i) {
-                    UTILS.warning("Duplicate input " + DEER.KEY + " attribute value '" + el.getAttribute(DEER.KEY) + "' detected during submission.  This input will be ignored.  See duplicate below. ", el)
+                    warning("Duplicate input " + DEER.KEY + " attribute value '" + el.getAttribute(DEER.KEY) + "' detected during submission.  This input will be ignored.  See duplicate below. ", el)
                 }
                 return flatKeys.indexOf(el.getAttribute(DEER.KEY)) === i
             })
@@ -325,6 +316,19 @@ export default class DeerReport {
                         target: entity["@id"]?.replace(/https?:/,'https:'),
                         body: {}
                     }
+                    
+                    // Add FOAF context for nickname fields or forms
+                    let inputKey = input.getAttribute(DEER.KEY)
+                    if (inputKey === "nick" || this.type === "nick") {
+                        annotation["@context"] = [
+                            "http://www.w3.org/ns/anno.jsonld",
+                            {
+                                "foaf": "http://xmlns.com/foaf/0.1/",
+                                "prov": "http://www.w3.org/ns/prov#"
+                            }
+                        ]
+                    }
+                    
                     if(creatorId) { annotation.creator = creatorId?.replace(/https?:/,'https:') }
                     if(motivation) { annotation.motivation = motivation }
                     if(evidence) { annotation.evidence = evidence }
@@ -342,7 +346,7 @@ export default class DeerReport {
                             case "@list":
                                 if (arrKey === "") {
                                     arrKey = "items"
-                                    UTILS.warning("Found input with '" + DEER.INPUTTYPE + "' attribute but no '" + DEER.LIST + "' attribute during submission.  DEER will use the default schema '" + arrKey + "' to save the array values for this " + inputType + ".", input)
+                                    warning("Found input with '" + DEER.INPUTTYPE + "' attribute but no '" + DEER.LIST + "' attribute during submission.  DEER will use the default schema '" + arrKey + "' to save the array values for this " + inputType + ".", input)
                                 }
                                 annotation.body[input.getAttribute(DEER.KEY)] = { "@type": inputType }
                                 annotation.body[input.getAttribute(DEER.KEY)][arrKey] = val.split(delim)
@@ -350,7 +354,7 @@ export default class DeerReport {
                             case "ItemList":
                                 if (arrKey === "") {
                                     arrKey = "itemListElement"
-                                    UTILS.warning("Found input with '" + DEER.INPUTTYPE + "' attribute but no '" + DEER.LIST + "' attribute during submission.  DEER will use the default schema '" + arrKey + "' to save the array values for this " + inputType + ".", input)
+                                    warning("Found input with '" + DEER.INPUTTYPE + "' attribute but no '" + DEER.LIST + "' attribute during submission.  DEER will use the default schema '" + arrKey + "' to save the array values for this " + inputType + ".", input)
                                 }
                                 annotation.body[input.getAttribute(DEER.KEY)] = { "@type": inputType }
                                 annotation.body[input.getAttribute(DEER.KEY)][arrKey] = val.split(delim)
@@ -366,7 +370,7 @@ export default class DeerReport {
                                 annotation.body[input.getAttribute(DEER.KEY)] = body
                                 break
                             default:
-                                UTILS.warning("Cannot save value of unsupported type '" + inputType + "'.  This annotation will not be saved or updated.", input)
+                                warning("Cannot save value of unsupported type '" + inputType + "'.  This annotation will not be saved or updated.", input)
                                 return false
                         }
                     } else {
@@ -440,7 +444,7 @@ export default class DeerReport {
                     case "@list":
                         if (arrKey === "") {
                             arrKey = "items"
-                            UTILS.warning("Found input with '" + DEER.INPUTTYPE + "' attribute but no '" + DEER.LIST + "' attribute during submission.  DEER will use the default schema '" + arrKey + "' to save the array values for this " + inputType + ".", input)
+                            warning("Found input with '" + DEER.INPUTTYPE + "' attribute but no '" + DEER.LIST + "' attribute during submission.  DEER will use the default schema '" + arrKey + "' to save the array values for this " + inputType + ".", input)
                         }
                         record[key]["@type"] = inputType
                         record[key][arrKey] = val.split(delim)
@@ -448,7 +452,7 @@ export default class DeerReport {
                     case "ItemList":
                         if (arrKey === "") {
                             arrKey = "itemListElement"
-                            UTILS.warning("Found input with '" + DEER.INPUTTYPE + "' attribute but no '" + DEER.LIST + "' attribute during submission.  DEER will use the default schema '" + arrKey + "' to save the array values for this " + inputType + ".", input)
+                            warning("Found input with '" + DEER.INPUTTYPE + "' attribute but no '" + DEER.LIST + "' attribute during submission.  DEER will use the default schema '" + arrKey + "' to save the array values for this " + inputType + ".", input)
                         }
                         record[key] = { "@type": inputType }
                         record[key][arrKey] = val.split(delim)
@@ -464,7 +468,7 @@ export default class DeerReport {
                         record[key] = body
                         break
                     default:
-                        UTILS.warning("Cannot save value of unsupported type '" + inputType + "'.  This annotation will not be saved or updated.", input)
+                        warning("Cannot save value of unsupported type '" + inputType + "'.  This annotation will not be saved or updated.", input)
                         return false
                 }
             } else {
@@ -474,10 +478,10 @@ export default class DeerReport {
         })
         if (Object.keys(record).length === 0) {
             //There is no good reason for this, but DEER allows it.  However, there better a type otherwise it is completely undescribed.
-            UTILS.warning("The form submitted does not contain any inputs. The resulting entity will not have any descriptive encoding.", this.elem)
+            warning("The form submitted does not contain any inputs. The resulting entity will not have any descriptive encoding.", this.elem)
             if (!this.type) {
                 //DEER does not abide.  A completely undescribed object, even if we were to find evidence and context, is useless, especially in this 'simple' context. 
-                UTILS.warning("Form submission should not result in a completely undescribed object.  At least a 'type' property must be present.  Please add information to submit this simple form.", this.elem)
+                warning("Form submission should not result in a completely undescribed object.  At least a 'type' property must be present.  Please add information to submit this simple form.", this.elem)
                 //Deny outright and send an empty object upstream (see processRecord).
                 return {}
             }

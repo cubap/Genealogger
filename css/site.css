@@ -1,0 +1,319 @@
+/* 
+    Created on : Jun 25, 2020, 8:25:34 AM
+    Author     : cubap
+*/
+label, .person-detail {
+    display: grid;
+}
+
+body {
+  font-family: 'Roboto', Arial, sans-serif;
+  background: #f5f5f5;
+  margin: 0;
+  padding: 0;
+  color: #222;
+}
+
+header, nav, main, footer {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+a {
+  color: #1976d2;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+a:hover {
+  color: #0d47a1;
+  text-decoration: underline;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin: 1.5rem 0 1rem 0;
+  color: #333;
+}
+
+/* Material-style card for the list */
+deer-list {
+  display: block;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 2rem 1.5rem 1.5rem 1.5rem;
+  margin: 2rem auto 2rem auto;
+  max-width: 700px;
+}
+deer-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+deer-list li {
+  display: flex;
+  align-items: center;
+  padding: 1rem 0.5rem;
+  border-bottom: 1px solid #eee;
+  font-size: 1.1rem;
+  transition: background 0.2s;
+}
+deer-list li:last-child {
+  border-bottom: none;
+}
+deer-list li:hover {
+  background: #f0f7ff;
+}
+deer-list a {
+  flex: 1;
+  color: #1976d2;
+  font-weight: 500;
+  font-size: 1.1rem;
+  letter-spacing: 0.01em;
+}
+
+/* Add button style for New Person */
+.add-person-btn, a[href="person.html"] {
+  display: inline-block;
+  background: #1976d2;
+  color: #fff !important;
+  border: none;
+  border-radius: 24px;
+  padding: 0.7em 2em;
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 1.5rem 0 0 0;
+  box-shadow: 0 2px 8px rgba(25,118,210,0.08);
+  transition: background 0.2s, box-shadow 0.2s;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.add-person-btn:hover, a[href="person.html"]:hover {
+  background: #0d47a1;
+  box-shadow: 0 4px 16px rgba(25,118,210,0.12);
+}
+
+/* Home link styling */
+body > a[href="./"] {
+  display: inline-block;
+  margin: 1.5rem 0 0 1.5rem;
+  color: #888;
+  font-size: 1rem;
+  text-decoration: none;
+  font-weight: 400;
+}
+body > a[href="./"]:hover {
+  color: #1976d2;
+  text-decoration: underline;
+}
+
+/* Person detail styles for person.html */
+.material-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 2rem 1.5rem 1.5rem 1.5rem;
+  margin: 2rem auto 2rem auto;
+  max-width: 700px;
+  display: block;
+}
+
+.person-actions {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 1.5rem 1.5rem 1.5rem 1.5rem;
+  margin: 2rem auto 2rem auto;
+  max-width: 700px;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.material-btn {
+  display: inline-block;
+  background: #1976d2;
+  color: #fff !important;
+  border: none;
+  border-radius: 24px;
+  padding: 0.6em 1.5em;
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(25,118,210,0.08);
+  transition: background 0.2s, box-shadow 0.2s;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.material-btn:hover {
+  background: #0d47a1;
+  box-shadow: 0 4px 16px rgba(25,118,210,0.12);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.material-banner {
+    margin-bottom: 1em;
+}
+
+/* Typeahead Filter Styles */
+.typeahead-filter {
+    margin: 1rem auto 1rem auto;
+    max-width: 700px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    padding: 1rem;
+}
+
+.typeahead-input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fafafa;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.typeahead-input:focus {
+    outline: none;
+    border-color: #1976d2;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.typeahead-input::placeholder {
+    color: #666;
+    font-style: italic;
+}
+
+/* Initially hidden until list loads */
+deer-typeahead-filter {
+    display: none;
+}
+
+/* Nickname Editor Styles */
+.nickname-editor {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.nickname-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nickname-label {
+    font-weight: 500;
+    color: #666;
+}
+
+.nickname-field-label {
+    display: block;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.nickname-value {
+    flex: 1;
+    color: #333;
+    font-style: italic;
+}
+
+.nickname-input {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.nickname-input:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.nickname-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.material-btn-small {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #bbdefb;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.material-btn-small:hover {
+    background: #bbdefb;
+}
+
+.material-btn-secondary {
+    background: #f5f5f5;
+    color: #666;
+    border: 1px solid #ddd;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.material-btn-secondary:hover {
+    background: #e0e0e0;
+}
+
+.edit-icon {
+    font-size: 0.8rem;
+}
+
+.nickname-editor.editing {
+    background: #fff;
+    border-color: #1976d2;
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+  deer-list, header, nav, main, footer {
+    max-width: 98vw;
+    padding: 0.5rem;
+  }
+  .material-card, .person-actions {
+    max-width: 98vw;
+    padding: 0.5rem;
+  }
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

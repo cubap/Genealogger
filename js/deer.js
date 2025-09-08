@@ -15,8 +15,7 @@ import { default as DEER } from './deer-config.js'
 
 // Overwrite or add certain values to the configuration to customize.
 
-// new template
-DEER.TEMPLATES.cat = (obj) => `<h5>${obj.name}</h5><img src="https://placekitten.com/300/150" style="width:100%;">`
+// Legacy template registry logic removed. All rendering now uses custom elements.
 
 // sandbox repository URLS
 DEER.URLS = {
@@ -35,6 +34,10 @@ import { default as renderer, initializeDeerViews } from './deer-render.js'
 // CDN at https://centerfordigitalhumanities.github.io/deer/releases/
 import { default as record, initializeDeerForms } from './deer-record.js'
 
+// Import custom components
+import './components/deer-typeahead-filter.js'
+import './components/deer-nickname-editor.js'
+
 // fire up the element detection as needed
 try {
     initializeDeerViews(DEER)
@@ -43,4 +46,10 @@ try {
     // silently fail if render or record is not loaded
 }
 
-
+// Global listener for nickname updates to refresh displays
+document.addEventListener('deer-updated', (event) => {
+    if ((event.detail?.nickname !== undefined || event.detail?.nick !== undefined) && event.detail?.['@id']) {
+        // Clear cache for the updated person so components will refetch
+        localStorage.removeItem(event.detail['@id'])
+    }
+})
