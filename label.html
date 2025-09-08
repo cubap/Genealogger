@@ -39,7 +39,7 @@ and open the template in the editor.
                 personDetail.setAttribute("deer-id", personID)
                 ;[...document.querySelectorAll('.person-detail')].forEach(el=>el.href+=personID)
                 if (personID) {
-                    adding.style.display = "block"
+                    adding.classList.remove('hidden')
                 }
             }
         </script>
