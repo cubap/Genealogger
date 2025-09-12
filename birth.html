@@ -38,7 +38,7 @@ and open the template in the editor.
             <form deer-type="Person" deer-context="http://schema.org" id="parentDetail" deer-motivation="describing" deer-creator="cubap">
                 <select class="personDropdown" title="Select a person"></select>
                 <label>Father: <input id="dadID" type="text" deer-key="hasFather"></label>
-                <select class="personDropdown"></select>
+                <select class="personDropdown" title="Select a person"></select>
                 <label>Mother: <input id="momID" type="text" deer-key="hasMother"></label>
                 <label>Residence: <input id="homeID" type="text" deer-key="homeLocation"></label>
                 <input type="submit" value="set person details">
@@ -186,13 +186,7 @@ and open the template in the editor.
                     setTimeout(populatePersonInputs, 0)
                 }
             })
-            birthDetail.addEventListener("deer-form-rendered", event => {
-                let currentEvidence = evidenceDetail.getAttribute('deer-id')
-                let evidence = personDetail.getAttribute('nv-evidence')
-                if (!currentEvidence && evidence) {
-                    evidenceDetail.setAttribute("deer-id", evidence)
-                }
-            })
+            // Evidence detail handling removed - can be added back when evidence UI is implemented
             window.onhashchange = () => {
                 let birthID = window.location.hash.substr(1)
                 birthDetail.setAttribute("deer-id", birthID)
