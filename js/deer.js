@@ -37,6 +37,7 @@ import { default as record, initializeDeerForms } from './deer-record.js'
 // Import custom components
 import './components/deer-typeahead-filter.js'
 import './components/deer-nickname-editor.js'
+import './components/deer-ancestor-timeline.js'
 
 // fire up the element detection as needed
 try {
