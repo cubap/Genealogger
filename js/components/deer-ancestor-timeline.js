@@ -379,25 +379,36 @@ class DeerAncestorTimeline extends HTMLElement {
             generationGroups.get(person.generation).push(person)
         })
         
-        // Calculate layout dimensions
-        const maxPeopleInGeneration = Math.max(...Array.from(generationGroups.values()).map(group => group.length))
-        const rowsPerGeneration = Math.max(1, maxPeopleInGeneration)
+        // Calculate layout dimensions per generation
         const personRowHeight = 50 // Height for each person row
         const generationSpacing = 20 // Extra space between generations
-        const totalGenerationHeight = (rowsPerGeneration * personRowHeight) + generationSpacing
+        
+        // Calculate height for each generation based on number of people in it
+        const generationHeights = new Map()
+        let totalHeight = margin.top + margin.bottom
+        
+        generations.forEach(gen => {
+            const peopleCount = generationGroups.get(gen).length
+            const genHeight = (peopleCount * personRowHeight) + generationSpacing
+            generationHeights.set(gen, genHeight)
+            totalHeight += genHeight
+        })
         
         // Update SVG height to accommodate all rows
-        const newHeight = Math.max(height, margin.top + margin.bottom + (generations.length * totalGenerationHeight))
+        const newHeight = Math.max(height, totalHeight)
         svg.setAttribute('height', newHeight)
         
         // Render generation backgrounds for visual separation
+        let currentY = margin.top
         generations.forEach((generation, genIndex) => {
-            const genY = margin.top + (genIndex * totalGenerationHeight)
+            const genHeight = generationHeights.get(generation)
+            const actualGenHeight = genHeight - generationSpacing // Height without spacing
+            
             const genRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
             genRect.setAttribute('x', margin.left - 20)
-            genRect.setAttribute('y', genY - 10)
+            genRect.setAttribute('y', currentY - 10)
             genRect.setAttribute('width', width - margin.left - margin.right + 40)
-            genRect.setAttribute('height', totalGenerationHeight - generationSpacing)
+            genRect.setAttribute('height', actualGenHeight)
             genRect.setAttribute('fill', generation === 0 ? '#e3f2fd' : '#f5f5f5')
             genRect.setAttribute('stroke', '#ddd')
             genRect.setAttribute('stroke-width', '1')
@@ -407,7 +418,7 @@ class DeerAncestorTimeline extends HTMLElement {
             // Generation label
             const genLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text')
             genLabel.setAttribute('x', '10')
-            genLabel.setAttribute('y', genY + (totalGenerationHeight - generationSpacing) / 2)
+            genLabel.setAttribute('y', currentY + (actualGenHeight / 2))
             genLabel.setAttribute('text-anchor', 'start')
             genLabel.setAttribute('dominant-baseline', 'middle')
             genLabel.setAttribute('font-size', '14')
@@ -415,15 +426,17 @@ class DeerAncestorTimeline extends HTMLElement {
             genLabel.setAttribute('fill', '#666')
             genLabel.textContent = `Gen ${generation}`
             svg.appendChild(genLabel)
+            
+            currentY += genHeight // Move to next generation position
         })
         
         // Render each person in their assigned row
+        currentY = margin.top // Reset position counter
         generations.forEach((generation, genIndex) => {
             const peopleInGeneration = generationGroups.get(generation)
             
             peopleInGeneration.forEach((personData, personIndex) => {
-                const genY = margin.top + (genIndex * totalGenerationHeight)
-                const y = genY + (personIndex * personRowHeight) + (personRowHeight / 2)
+                const y = currentY + (personIndex * personRowHeight) + (personRowHeight / 2)
                 
                 // Get birth, death, and baptism events for this person
                 const birthEvent = events.get(`${personData.id}-Birth`)
@@ -553,16 +566,18 @@ class DeerAncestorTimeline extends HTMLElement {
                 }
 
                 // Draw parent-child relationships
-                this.renderRelationshipLines(svg, personData, persons, events, xScale, margin, totalGenerationHeight, generations, genIndex, personIndex, peopleInGeneration)
+                this.renderRelationshipLines(svg, personData, persons, events, xScale, margin, generationHeights, generations, genIndex, personIndex, peopleInGeneration, currentY)
             })
+            
+            // Move to next generation position
+            currentY += generationHeights.get(generation)
         })
     }
 
-    renderRelationshipLines(svg, person, persons, events, xScale, margin, totalGenerationHeight, generations, genIndex, personIndex, peopleInGeneration) {
+    renderRelationshipLines(svg, person, persons, events, xScale, margin, generationHeights, generations, genIndex, personIndex, peopleInGeneration, currentGenY) {
         if (person.fatherId || person.motherId) {
             const personRowHeight = 50
-            const genY = margin.top + (genIndex * totalGenerationHeight)
-            const childY = genY + (personIndex * personRowHeight) + (personRowHeight / 2)
+            const childY = currentGenY + (personIndex * personRowHeight) + (personRowHeight / 2)
             const childBirth = events.get(`${person.id}-Birth`)
             const childBaptism = events.get(`${person.id}-Baptism`)
             // Use birth date, or baptism if no birth, or estimate
@@ -574,7 +589,12 @@ class DeerAncestorTimeline extends HTMLElement {
             if (person.fatherId && persons.has(person.fatherId)) {
                 const father = persons.get(person.fatherId)
                 const fatherGenIndex = generations.indexOf(father.generation)
-                const fatherGenY = margin.top + (fatherGenIndex * totalGenerationHeight)
+                
+                // Calculate father's Y position using the cumulative heights
+                let fatherGenY = margin.top
+                for (let i = 0; i < fatherGenIndex; i++) {
+                    fatherGenY += generationHeights.get(generations[i])
+                }
                 
                 // Find father's position within his generation
                 const fatherGeneration = Array.from(persons.values()).filter(p => p.generation === father.generation)
@@ -595,7 +615,12 @@ class DeerAncestorTimeline extends HTMLElement {
             if (person.motherId && persons.has(person.motherId)) {
                 const mother = persons.get(person.motherId)
                 const motherGenIndex = generations.indexOf(mother.generation)
-                const motherGenY = margin.top + (motherGenIndex * totalGenerationHeight)
+                
+                // Calculate mother's Y position using the cumulative heights
+                let motherGenY = margin.top
+                for (let i = 0; i < motherGenIndex; i++) {
+                    motherGenY += generationHeights.get(generations[i])
+                }
                 
                 // Find mother's position within her generation
                 const motherGeneration = Array.from(persons.values()).filter(p => p.generation === mother.generation)
@@ -620,13 +645,19 @@ class DeerAncestorTimeline extends HTMLElement {
                 const mother = persons.get(person.motherId)
                 
                 const fatherGenIndex = generations.indexOf(father.generation)
-                const fatherGenY = margin.top + (fatherGenIndex * totalGenerationHeight)
+                let fatherGenY = margin.top
+                for (let i = 0; i < fatherGenIndex; i++) {
+                    fatherGenY += generationHeights.get(generations[i])
+                }
                 const fatherGeneration = Array.from(persons.values()).filter(p => p.generation === father.generation)
                 const fatherPersonIndex = fatherGeneration.findIndex(p => p.id === father.id)
                 const fatherY = fatherGenY + (fatherPersonIndex * personRowHeight) + (personRowHeight / 2)
                 
                 const motherGenIndex = generations.indexOf(mother.generation)
-                const motherGenY = margin.top + (motherGenIndex * totalGenerationHeight)
+                let motherGenY = margin.top
+                for (let i = 0; i < motherGenIndex; i++) {
+                    motherGenY += generationHeights.get(generations[i])
+                }
                 const motherGeneration = Array.from(persons.values()).filter(p => p.generation === mother.generation)
                 const motherPersonIndex = motherGeneration.findIndex(p => p.id === mother.id)
                 const motherY = motherGenY + (motherPersonIndex * personRowHeight) + (personRowHeight / 2)
