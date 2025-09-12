@@ -317,3 +317,92 @@ deer-typeahead-filter {
     gap: 0.5rem;
   }
 }
+
+/* Ancestor Timeline Styles */
+.ancestor-timeline-container {
+    font-family: 'Roboto', Arial, sans-serif;
+}
+
+.timeline-controls {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.timeline-controls h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.timeline-display {
+    min-height: 600px;
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.timeline-error {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    font-style: italic;
+}
+
+/* Timeline-specific styles */
+.person-timeline-bar {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.person-timeline-bar:hover {
+    opacity: 0.8;
+}
+
+.person-name {
+    pointer-events: none;
+    font-family: 'Roboto', Arial, sans-serif;
+}
+
+.generation-label {
+    font-family: 'Roboto', Arial, sans-serif;
+    font-weight: 500;
+}
+
+.birth-marker, .death-marker {
+    cursor: pointer;
+    transition: r 0.2s ease;
+}
+
+.birth-marker:hover, .death-marker:hover {
+    r: 7;
+}
+
+.parent-child-line {
+    pointer-events: none;
+}
+
+.timeline-tooltip {
+    max-width: 200px;
+    line-height: 1.4;
+}
+
+.timeline-axis-top text,
+.timeline-axis-bottom text {
+    font-family: 'Roboto', Arial, sans-serif;
+}
+
+/* Loading state styles */
+deer-ancestor-timeline:not([deer-id]) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    background: #f5f5f5;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    color: #666;
+    font-style: italic;
+}

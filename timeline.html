@@ -6,18 +6,75 @@ and open the template in the editor.
 -->
 <html lang="en">
     <head>
-        <title>Genealogger - Timeline</title>
+        <title>Genealogger - Ancestor Timeline</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
-        <script src="js/deer.js" type="module"></script>
     </head>
     <body>
         <a href="./">home</a>
         <div class="material-card">
-            <h2>Timeline</h2>
-            <p>View people on a timeline.</p>
-            <deer-timeline deer-collection="Genealogger-085522">Loading timeline</deer-timeline>
+            <h2>Ancestor Timeline</h2>
+            <p>View ancestors on an interactive timeline that runs back in time from left to right. The newest generation appears at the top left, with each person getting their own row to prevent overlap. Estimated dates are shown with dotted lines, and baptism dates can be used to estimate birth years.</p>
+            
+            <!-- Demo button for testing -->
+            <div style="margin-bottom: 1.5rem; text-align: center;">
+                <button id="showDemo" class="material-btn">Show Demo Timeline</button>
+                <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+                    <em>Note: This demo shows sample family data demonstrating the new timeline features. In a full deployment, you would select a person from the database or provide a URL hash with a person ID.</em>
+                </p>
+            </div>
+
+            <!-- Timeline display -->
+            <div id="timelineContainer" class="timeline-display" style="margin-top: 2rem;">
+                <deer-ancestor-timeline id="ancestorTimeline">
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <p>Select a person to view their ancestor timeline visualization.</p>
+                        <p style="font-size: 0.9rem; margin-top: 1rem;">
+                            <strong>URL Support:</strong> You can also load a specific person by adding their ID to the URL hash:<br>
+                            <code>timeline.html#https://devstore.rerum.io/v1/id/PERSON_ID</code>
+                        </p>
+                        <p style="font-size: 0.9rem; margin-top: 1rem;">
+                            <strong>Features:</strong>
+                            <br>• Timeline runs back in time (newest at left, oldest at right)
+                            <br>• Each person gets their own row to prevent overlap
+                            <br>• Baptism dates can estimate birth years
+                            <br>• Interactive pan and zoom functionality
+                            <br>• Hover tooltips with detailed information
+                        </p>
+                    </div>
+                </deer-ancestor-timeline>
+            </div>
         </div>
+        
+        <!-- Try to load the full DEER system, but fall back to standalone if it fails -->
+        <script type="module">
+            try {
+                // Try to import the full DEER system
+                await import('./js/deer.js');
+                console.log('Full DEER system loaded successfully');
+                
+                // Demo button handler
+                document.getElementById('showDemo').addEventListener('click', () => {
+                    const timeline = document.getElementById('ancestorTimeline')
+                    timeline.setAttribute('demo', 'true')
+                })
+
+                // Check for URL hash on page load
+                const hash = window.location.hash
+                if (hash && hash.startsWith('#http')) {
+                    const timeline = document.getElementById('ancestorTimeline')
+                    const personId = hash.substring(1) // Remove the # character
+                    timeline.setAttribute('deer-id', personId)
+                }
+            } catch (error) {
+                console.warn('Full DEER system failed to load, using standalone timeline:', error);
+                
+                // Fallback: redirect to standalone version
+                const currentUrl = new URL(window.location);
+                currentUrl.pathname = currentUrl.pathname.replace('timeline.html', 'timeline-standalone.html');
+                window.location.replace(currentUrl.toString());
+            }
+        </script>
     </body>
 </html>
