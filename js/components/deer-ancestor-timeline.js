@@ -219,8 +219,8 @@ class DeerAncestorTimeline extends HTMLElement {
         container.style.borderRadius = '8px'
         container.style.background = '#fff'
         
-        // Create SVG
-        const timelineWidth = Math.max(1200, dateRange.span * 5) // 5px per year
+        // Create SVG with more reasonable width scaling
+        const timelineWidth = Math.max(800, Math.min(1500, dateRange.span * 2)) // 2px per year, capped at 1500px
         const timelineHeight = 500
         const rowHeight = 80
         const margin = { top: 60, right: 100, bottom: 60, left: 150 }
@@ -477,16 +477,15 @@ class DeerAncestorTimeline extends HTMLElement {
                     isEstimated = true
                 }
 
-                // Person timeline bar (fix negative width issue for reversed timeline)
-                const barStartX = xScale(startDate)
-                const barEndX = xScale(endDate)
-                const barX = Math.min(barStartX, barEndX)
-                const barWidth = Math.abs(barEndX - barStartX)
+                // Person timeline bar - fixed width positioned at birth date
+                const barCenterX = xScale(startDate)
+                const fixedBarWidth = 180 // Fixed width for readability
+                const barX = barCenterX - (fixedBarWidth / 2)
                 
                 const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
                 rect.setAttribute('x', barX)
                 rect.setAttribute('y', y - 15)
-                rect.setAttribute('width', barWidth)
+                rect.setAttribute('width', fixedBarWidth)
                 rect.setAttribute('height', 30)
                 rect.setAttribute('fill', personData.generation === 0 ? '#1976d2' : '#90caf9')
                 rect.setAttribute('stroke', '#1976d2')
@@ -512,7 +511,7 @@ class DeerAncestorTimeline extends HTMLElement {
 
                 // Person name label
                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-                text.setAttribute('x', barX + barWidth / 2)
+                text.setAttribute('x', barX + fixedBarWidth / 2)
                 text.setAttribute('y', y)
                 text.setAttribute('text-anchor', 'middle')
                 text.setAttribute('dominant-baseline', 'middle')
