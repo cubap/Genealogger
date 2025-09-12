@@ -10,7 +10,14 @@ class DeerAncestorTimeline extends HTMLElement {
 
     async connectedCallback() {
         this.innerHTML = `<span>Loading ancestor timeline...</span>`
-        if (this.getAttribute('demo') === 'true') {
+        
+        // Check for URL hash with person ID
+        const hash = window.location.hash
+        if (hash && hash.startsWith('#http')) {
+            const personId = hash.substring(1) // Remove the # character
+            this.setAttribute(config.ID, personId)
+            await this.render()
+        } else if (this.getAttribute('demo') === 'true') {
             await this.render()
         }
     }
@@ -173,12 +180,12 @@ class DeerAncestorTimeline extends HTMLElement {
                 try {
                     const eventObj = await expand(annotation.target)
                     const type = getValue(eventObj.additionalType)
-                    if (type === 'Birth' || type === 'Death') {
+                    if (type === 'Birth' || type === 'Death' || type === 'Baptism') {
                         const eventData = {
                             id: eventObj['@id'],
                             type: type,
                             personId: personId,
-                            date: getValue(eventObj.birthDate) || getValue(eventObj.deathDate),
+                            date: getValue(eventObj.birthDate) || getValue(eventObj.deathDate) || getValue(eventObj.date),
                             label: getLabel(eventObj)
                         }
                         events.set(`${personId}-${type}`, eventData)
@@ -224,8 +231,8 @@ class DeerAncestorTimeline extends HTMLElement {
         svg.style.cursor = 'grab'
         svg.style.display = 'block'
 
-        // Calculate scales
-        const generations = Array.from(new Set(Array.from(persons.values()).map(p => p.generation))).sort((a, b) => b - a)
+        // Calculate scales - REVERSE the date order so newest is on left
+        const generations = Array.from(new Set(Array.from(persons.values()).map(p => p.generation))).sort((a, b) => a - b) // Gen 0 first (newest)
         
         // Render timeline axis
         this.renderTimelineAxis(svg, dateRange, timelineWidth, timelineHeight, margin)
@@ -295,7 +302,8 @@ class DeerAncestorTimeline extends HTMLElement {
     }
 
     renderTimelineAxis(svg, dateRange, width, height, margin) {
-        const xScale = this.createScale([dateRange.min, dateRange.max], [margin.left, width - margin.right])
+        // REVERSE the x-scale so newer dates are on the left
+        const xScale = this.createScale([dateRange.max, dateRange.min], [margin.left, width - margin.right])
         
         // Top axis line
         const topAxisLine = document.createElementNS('http://www.w3.org/2000/svg', 'line')
@@ -360,140 +368,218 @@ class DeerAncestorTimeline extends HTMLElement {
     }
 
     renderPersonsAndEvents(svg, persons, events, dateRange, generations, width, height, margin, rowHeight) {
-        const xScale = this.createScale([dateRange.min, dateRange.max], [margin.left, width - margin.right])
-        const generationHeight = (height - margin.top - margin.bottom) / generations.length
+        // REVERSE the x-scale so newer dates are on the left
+        const xScale = this.createScale([dateRange.max, dateRange.min], [margin.left, width - margin.right])
         
-        Array.from(persons.values()).forEach((personData, index) => {
-            const y = margin.top + (generations.indexOf(personData.generation) * generationHeight) + generationHeight / 2
+        // Group people by generation and assign rows
+        const generationGroups = new Map()
+        generations.forEach(gen => generationGroups.set(gen, []))
+        
+        Array.from(persons.values()).forEach(person => {
+            generationGroups.get(person.generation).push(person)
+        })
+        
+        // Calculate layout dimensions
+        const maxPeopleInGeneration = Math.max(...Array.from(generationGroups.values()).map(group => group.length))
+        const rowsPerGeneration = Math.max(1, maxPeopleInGeneration)
+        const personRowHeight = 50 // Height for each person row
+        const generationSpacing = 20 // Extra space between generations
+        const totalGenerationHeight = (rowsPerGeneration * personRowHeight) + generationSpacing
+        
+        // Update SVG height to accommodate all rows
+        const newHeight = Math.max(height, margin.top + margin.bottom + (generations.length * totalGenerationHeight))
+        svg.setAttribute('height', newHeight)
+        
+        // Render generation backgrounds for visual separation
+        generations.forEach((generation, genIndex) => {
+            const genY = margin.top + (genIndex * totalGenerationHeight)
+            const genRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+            genRect.setAttribute('x', margin.left - 20)
+            genRect.setAttribute('y', genY - 10)
+            genRect.setAttribute('width', width - margin.left - margin.right + 40)
+            genRect.setAttribute('height', totalGenerationHeight - generationSpacing)
+            genRect.setAttribute('fill', generation === 0 ? '#e3f2fd' : '#f5f5f5')
+            genRect.setAttribute('stroke', '#ddd')
+            genRect.setAttribute('stroke-width', '1')
+            genRect.setAttribute('opacity', '0.3')
+            svg.appendChild(genRect)
             
-            // Get birth and death events for this person
-            const birthEvent = events.get(`${personData.id}-Birth`)
-            const deathEvent = events.get(`${personData.id}-Death`)
-
-            // Calculate timeline span for this person
-            let startDate, endDate, isEstimated = false
-
-            if (birthEvent && birthEvent.date) {
-                startDate = new Date(birthEvent.date)
-            } else {
-                // Estimate birth date based on death date or current year
-                isEstimated = true
-                if (deathEvent && deathEvent.date) {
-                    startDate = new Date(new Date(deathEvent.date).getFullYear() - 80, 0, 1)
-                } else {
-                    startDate = new Date(dateRange.max.getFullYear() - 80 - (personData.generation * 25), 0, 1)
-                }
-            }
-
-            if (deathEvent && deathEvent.date) {
-                endDate = new Date(deathEvent.date)
-            } else {
-                // Estimate death date or use a reasonable endpoint
-                if (birthEvent && birthEvent.date) {
-                    endDate = new Date(new Date(birthEvent.date).getFullYear() + 80, 11, 31)
-                } else {
-                    endDate = new Date(startDate.getFullYear() + 80, 11, 31)
-                }
-                isEstimated = true
-            }
-
-            // Person timeline bar
-            const barX = xScale(startDate)
-            const barWidth = xScale(endDate) - barX
-            
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-            rect.setAttribute('x', barX)
-            rect.setAttribute('y', y - 15)
-            rect.setAttribute('width', barWidth)
-            rect.setAttribute('height', 30)
-            rect.setAttribute('fill', personData.generation === 0 ? '#1976d2' : '#90caf9')
-            rect.setAttribute('stroke', '#1976d2')
-            rect.setAttribute('stroke-width', '2')
-            rect.style.opacity = isEstimated ? '0.6' : '1'
-            if (isEstimated) {
-                rect.setAttribute('stroke-dasharray', '5,5')
-            }
-            rect.style.cursor = 'pointer'
-            
-            // Store data for tooltip
-            rect.personData = {
-                ...personData,
-                birthEvent,
-                deathEvent,
-                startDate,
-                endDate,
-                isEstimated
-            }
-            
-            svg.appendChild(rect)
-
-            // Person name label
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-            text.setAttribute('x', barX + barWidth / 2)
-            text.setAttribute('y', y)
-            text.setAttribute('text-anchor', 'middle')
-            text.setAttribute('dominant-baseline', 'middle')
-            text.setAttribute('font-size', '12')
-            text.setAttribute('font-weight', '500')
-            text.setAttribute('fill', personData.generation === 0 ? '#fff' : '#1976d2')
-            text.textContent = personData.name
-            text.style.pointerEvents = 'none'
-            svg.appendChild(text)
-
-            // Birth event marker
-            if (birthEvent && birthEvent.date) {
-                const birthMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-                birthMarker.setAttribute('cx', xScale(startDate))
-                birthMarker.setAttribute('cy', y)
-                birthMarker.setAttribute('r', '5')
-                birthMarker.setAttribute('fill', '#4caf50')
-                birthMarker.setAttribute('stroke', '#fff')
-                birthMarker.setAttribute('stroke-width', '2')
-                birthMarker.style.cursor = 'pointer'
-                birthMarker.eventData = birthEvent
-                svg.appendChild(birthMarker)
-            }
-
-            // Death event marker
-            if (deathEvent && deathEvent.date) {
-                const deathMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-                deathMarker.setAttribute('cx', xScale(endDate))
-                deathMarker.setAttribute('cy', y)
-                deathMarker.setAttribute('r', '5')
-                deathMarker.setAttribute('fill', '#f44336')
-                deathMarker.setAttribute('stroke', '#fff')
-                deathMarker.setAttribute('stroke-width', '2')
-                deathMarker.style.cursor = 'pointer'
-                deathMarker.eventData = deathEvent
-                svg.appendChild(deathMarker)
-            }
-
             // Generation label
             const genLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text')
             genLabel.setAttribute('x', '10')
-            genLabel.setAttribute('y', y)
+            genLabel.setAttribute('y', genY + (totalGenerationHeight - generationSpacing) / 2)
             genLabel.setAttribute('text-anchor', 'start')
             genLabel.setAttribute('dominant-baseline', 'middle')
-            genLabel.setAttribute('font-size', '10')
+            genLabel.setAttribute('font-size', '14')
+            genLabel.setAttribute('font-weight', 'bold')
             genLabel.setAttribute('fill', '#666')
-            genLabel.textContent = `Gen ${personData.generation}`
+            genLabel.textContent = `Gen ${generation}`
             svg.appendChild(genLabel)
+        })
+        
+        // Render each person in their assigned row
+        generations.forEach((generation, genIndex) => {
+            const peopleInGeneration = generationGroups.get(generation)
+            
+            peopleInGeneration.forEach((personData, personIndex) => {
+                const genY = margin.top + (genIndex * totalGenerationHeight)
+                const y = genY + (personIndex * personRowHeight) + (personRowHeight / 2)
+                
+                // Get birth, death, and baptism events for this person
+                const birthEvent = events.get(`${personData.id}-Birth`)
+                const deathEvent = events.get(`${personData.id}-Death`)
+                const baptismEvent = events.get(`${personData.id}-Baptism`)
 
-            // Draw parent-child relationships
-            this.renderRelationshipLines(svg, personData, persons, events, xScale, margin, generationHeight, generations)
+                // Calculate timeline span for this person
+                let startDate, endDate, isEstimated = false
+
+                if (birthEvent && birthEvent.date) {
+                    startDate = new Date(birthEvent.date)
+                } else if (baptismEvent && baptismEvent.date) {
+                    // Estimate birth as the year before baptism
+                    isEstimated = true
+                    const baptismDate = new Date(baptismEvent.date)
+                    startDate = new Date(baptismDate.getFullYear() - 1, baptismDate.getMonth(), baptismDate.getDate())
+                } else {
+                    // Estimate birth date based on death date or current year
+                    isEstimated = true
+                    if (deathEvent && deathEvent.date) {
+                        startDate = new Date(new Date(deathEvent.date).getFullYear() - 80, 0, 1)
+                    } else {
+                        startDate = new Date(dateRange.max.getFullYear() - 80 - (personData.generation * 25), 0, 1)
+                    }
+                }
+
+                if (deathEvent && deathEvent.date) {
+                    endDate = new Date(deathEvent.date)
+                } else {
+                    // Estimate death date or use a reasonable endpoint
+                    if (birthEvent && birthEvent.date) {
+                        endDate = new Date(new Date(birthEvent.date).getFullYear() + 80, 11, 31)
+                    } else if (baptismEvent && baptismEvent.date) {
+                        endDate = new Date(new Date(baptismEvent.date).getFullYear() + 80, 11, 31)
+                    } else {
+                        endDate = new Date(startDate.getFullYear() + 80, 11, 31)
+                    }
+                    isEstimated = true
+                }
+
+                // Person timeline bar (fix negative width issue for reversed timeline)
+                const barStartX = xScale(startDate)
+                const barEndX = xScale(endDate)
+                const barX = Math.min(barStartX, barEndX)
+                const barWidth = Math.abs(barEndX - barStartX)
+                
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+                rect.setAttribute('x', barX)
+                rect.setAttribute('y', y - 15)
+                rect.setAttribute('width', barWidth)
+                rect.setAttribute('height', 30)
+                rect.setAttribute('fill', personData.generation === 0 ? '#1976d2' : '#90caf9')
+                rect.setAttribute('stroke', '#1976d2')
+                rect.setAttribute('stroke-width', '2')
+                rect.style.opacity = isEstimated ? '0.6' : '1'
+                if (isEstimated) {
+                    rect.setAttribute('stroke-dasharray', '5,5')
+                }
+                rect.style.cursor = 'pointer'
+                
+                // Store data for tooltip
+                rect.personData = {
+                    ...personData,
+                    birthEvent,
+                    deathEvent,
+                    baptismEvent,
+                    startDate,
+                    endDate,
+                    isEstimated
+                }
+                
+                svg.appendChild(rect)
+
+                // Person name label
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+                text.setAttribute('x', barX + barWidth / 2)
+                text.setAttribute('y', y)
+                text.setAttribute('text-anchor', 'middle')
+                text.setAttribute('dominant-baseline', 'middle')
+                text.setAttribute('font-size', '12')
+                text.setAttribute('font-weight', '500')
+                text.setAttribute('fill', personData.generation === 0 ? '#fff' : '#1976d2')
+                text.textContent = personData.name
+                text.style.pointerEvents = 'none'
+                svg.appendChild(text)
+
+                // Birth event marker
+                if (birthEvent && birthEvent.date) {
+                    const birthMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+                    birthMarker.setAttribute('cx', xScale(startDate))
+                    birthMarker.setAttribute('cy', y)
+                    birthMarker.setAttribute('r', '5')
+                    birthMarker.setAttribute('fill', '#4caf50')
+                    birthMarker.setAttribute('stroke', '#fff')
+                    birthMarker.setAttribute('stroke-width', '2')
+                    birthMarker.style.cursor = 'pointer'
+                    birthMarker.eventData = birthEvent
+                    svg.appendChild(birthMarker)
+                }
+
+                // Baptism event marker (if used for birth estimation)
+                if (baptismEvent && baptismEvent.date && (!birthEvent || !birthEvent.date)) {
+                    const baptismMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+                    baptismMarker.setAttribute('cx', xScale(new Date(baptismEvent.date)))
+                    baptismMarker.setAttribute('cy', y)
+                    baptismMarker.setAttribute('r', '4')
+                    baptismMarker.setAttribute('fill', '#9c27b0')
+                    baptismMarker.setAttribute('stroke', '#fff')
+                    baptismMarker.setAttribute('stroke-width', '2')
+                    baptismMarker.style.cursor = 'pointer'
+                    baptismMarker.eventData = baptismEvent
+                    svg.appendChild(baptismMarker)
+                }
+
+                // Death event marker
+                if (deathEvent && deathEvent.date) {
+                    const deathMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+                    deathMarker.setAttribute('cx', xScale(endDate))
+                    deathMarker.setAttribute('cy', y)
+                    deathMarker.setAttribute('r', '5')
+                    deathMarker.setAttribute('fill', '#f44336')
+                    deathMarker.setAttribute('stroke', '#fff')
+                    deathMarker.setAttribute('stroke-width', '2')
+                    deathMarker.style.cursor = 'pointer'
+                    deathMarker.eventData = deathEvent
+                    svg.appendChild(deathMarker)
+                }
+
+                // Draw parent-child relationships
+                this.renderRelationshipLines(svg, personData, persons, events, xScale, margin, totalGenerationHeight, generations, genIndex, personIndex, peopleInGeneration)
+            })
         })
     }
 
-    renderRelationshipLines(svg, person, persons, events, xScale, margin, generationHeight, generations) {
+    renderRelationshipLines(svg, person, persons, events, xScale, margin, totalGenerationHeight, generations, genIndex, personIndex, peopleInGeneration) {
         if (person.fatherId || person.motherId) {
-            const childY = margin.top + (generations.indexOf(person.generation) * generationHeight) + generationHeight / 2
+            const personRowHeight = 50
+            const genY = margin.top + (genIndex * totalGenerationHeight)
+            const childY = genY + (personIndex * personRowHeight) + (personRowHeight / 2)
             const childBirth = events.get(`${person.id}-Birth`)
-            const childBirthDate = childBirth ? new Date(childBirth.date) : new Date(2000, 0, 1)
+            const childBaptism = events.get(`${person.id}-Baptism`)
+            // Use birth date, or baptism if no birth, or estimate
+            const childBirthDate = childBirth?.date ? new Date(childBirth.date) : 
+                                 childBaptism?.date ? new Date(childBaptism.date) : 
+                                 new Date(2000, 0, 1)
             const childX = xScale(childBirthDate)
             
             if (person.fatherId && persons.has(person.fatherId)) {
                 const father = persons.get(person.fatherId)
-                const fatherY = margin.top + (generations.indexOf(father.generation) * generationHeight) + generationHeight / 2
+                const fatherGenIndex = generations.indexOf(father.generation)
+                const fatherGenY = margin.top + (fatherGenIndex * totalGenerationHeight)
+                
+                // Find father's position within his generation
+                const fatherGeneration = Array.from(persons.values()).filter(p => p.generation === father.generation)
+                const fatherPersonIndex = fatherGeneration.findIndex(p => p.id === father.id)
+                const fatherY = fatherGenY + (fatherPersonIndex * personRowHeight) + (personRowHeight / 2)
                 
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
                 line.setAttribute('x1', childX)
@@ -508,7 +594,13 @@ class DeerAncestorTimeline extends HTMLElement {
             
             if (person.motherId && persons.has(person.motherId)) {
                 const mother = persons.get(person.motherId)
-                const motherY = margin.top + (generations.indexOf(mother.generation) * generationHeight) + generationHeight / 2
+                const motherGenIndex = generations.indexOf(mother.generation)
+                const motherGenY = margin.top + (motherGenIndex * totalGenerationHeight)
+                
+                // Find mother's position within her generation
+                const motherGeneration = Array.from(persons.values()).filter(p => p.generation === mother.generation)
+                const motherPersonIndex = motherGeneration.findIndex(p => p.id === mother.id)
+                const motherY = motherGenY + (motherPersonIndex * personRowHeight) + (personRowHeight / 2)
                 
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
                 line.setAttribute('x1', childX)
@@ -526,8 +618,18 @@ class DeerAncestorTimeline extends HTMLElement {
                 persons.has(person.fatherId) && persons.has(person.motherId)) {
                 const father = persons.get(person.fatherId)
                 const mother = persons.get(person.motherId)
-                const fatherY = margin.top + (generations.indexOf(father.generation) * generationHeight) + generationHeight / 2
-                const motherY = margin.top + (generations.indexOf(mother.generation) * generationHeight) + generationHeight / 2
+                
+                const fatherGenIndex = generations.indexOf(father.generation)
+                const fatherGenY = margin.top + (fatherGenIndex * totalGenerationHeight)
+                const fatherGeneration = Array.from(persons.values()).filter(p => p.generation === father.generation)
+                const fatherPersonIndex = fatherGeneration.findIndex(p => p.id === father.id)
+                const fatherY = fatherGenY + (fatherPersonIndex * personRowHeight) + (personRowHeight / 2)
+                
+                const motherGenIndex = generations.indexOf(mother.generation)
+                const motherGenY = margin.top + (motherGenIndex * totalGenerationHeight)
+                const motherGeneration = Array.from(persons.values()).filter(p => p.generation === mother.generation)
+                const motherPersonIndex = motherGeneration.findIndex(p => p.id === mother.id)
+                const motherY = motherGenY + (motherPersonIndex * personRowHeight) + (personRowHeight / 2)
                 
                 const marriageLine = document.createElementNS('http://www.w3.org/2000/svg', 'line')
                 marriageLine.setAttribute('x1', childX - 20)
@@ -601,21 +703,24 @@ class DeerAncestorTimeline extends HTMLElement {
                 tooltip.style.display = 'block'
                 if (target.personData) {
                     const d = target.personData
-                    const birthStr = d.birthEvent ? d.birthEvent.date : 'Unknown'
+                    const birthStr = d.birthEvent ? d.birthEvent.date : 
+                                   d.baptismEvent ? `~${new Date(new Date(d.baptismEvent.date).getFullYear() - 1, new Date(d.baptismEvent.date).getMonth(), new Date(d.baptismEvent.date).getDate()).toISOString().split('T')[0]} (est. from baptism)` : 
+                                   'Unknown'
                     const deathStr = d.deathEvent ? d.deathEvent.date : 'Unknown'
                     tooltip.innerHTML = `
                         <b>${d.name}</b><br>
                         Born: ${birthStr}<br>
                         Died: ${deathStr}<br>
                         Generation: ${d.generation}
-                        ${d.isEstimated ? '<br><i>* Estimated dates</i>' : ''}
+                        ${d.isEstimated ? '<br><i>* Some dates estimated</i>' : ''}
+                        ${d.baptismEvent && !d.birthEvent ? '<br><i>Birth estimated from baptism</i>' : ''}
                     `
                 } else if (target.eventData) {
                     const e = target.eventData
                     tooltip.innerHTML = `
                         <b>${e.type} Event</b><br>
                         Date: ${e.date}<br>
-                        ${e.label}
+                        ${e.label || ''}
                     `
                 }
             }
