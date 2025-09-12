@@ -220,7 +220,7 @@ class DeerAncestorTimeline extends HTMLElement {
         container.style.background = '#fff'
         
         // Create SVG
-        const timelineWidth = Math.max(1200, dateRange.span * 15) // 15px per year
+        const timelineWidth = Math.max(1200, dateRange.span * 5) // 5px per year
         const timelineHeight = 500
         const rowHeight = 80
         const margin = { top: 60, right: 100, bottom: 60, left: 150 }
