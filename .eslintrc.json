@@ -11,6 +11,14 @@
   "rules": {
     "no-unused-vars": "warn",
     "no-console": "off",
+    "no-case-declarations": "warn",
+    "no-prototype-builtins": "warn",
+    "no-unsafe-finally": "warn",
+    "no-unsafe-optional-chaining": "warn",
+    "no-const-assign": "warn",
+    "no-empty": "warn",
+    "no-redeclare": "warn",
+    "no-redeclare": "warn",
     "indent": ["error", 4],
     "quotes": ["error", "single"],
     "semi": ["error", "never"]

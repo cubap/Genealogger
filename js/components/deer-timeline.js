@@ -9,7 +9,7 @@ class DeerTimelineTemplate extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Loading timeline...</span>`
+        this.innerHTML = '<span>Loading timeline...</span>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -27,11 +27,11 @@ class DeerTimelineTemplate extends HTMLElement {
             }
         }
 
-        let tmpl = `<ul>`
+        let tmpl = '<ul>'
         for (const item of obj.itemListElement || []) {
-            tmpl += `<li><deer-label deer-template="personDates" deer-id="${item['@id']}"></deer-label></li>`
+            tmpl += '<li><deer-label deer-template="personDates" deer-id="' + item['@id'] + '"></deer-label></li>'
         }
-        tmpl += `</ul>`
+        tmpl += '</ul>'
 
         this.innerHTML = tmpl
     }

@@ -8,7 +8,7 @@ class DeerEntityTemplate extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<div>Loading...</div>`
+        this.innerHTML = '<div>Loading...</div>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -33,8 +33,8 @@ class DeerEntityTemplate extends HTMLElement {
             let label = key
             let value = getValue(obj[key], key)
             try {
-                if ((value.image || value.trim?.()).length > 0) {
-                    list += (label === "depiction")
+                if ((value.image || (typeof value === 'string' && value.trim())).length > 0) {
+                    list += (label === 'depiction')
                         ? `<img title="${label}" src="${value.image || value}" ${config.SOURCE}="${getValue(obj[key].source, 'citationSource')}">`
                         : `<dt deer-source="${getValue(obj[key].source, 'citationSource')}">${label}</dt><dd>${value.image || value}</dd>`
                 }
@@ -43,31 +43,31 @@ class DeerEntityTemplate extends HTMLElement {
                 if (Array.isArray(value)) {
                     value.forEach((v, index) => {
                         let name = getLabel(v, (v.type || v['@type'] || label + '' + index))
-                        list += (v["@id"])
-                            ? `<dd><a href="#${v["@id"]}">${name}</a></dd>`
+                        list += (v['@id'])
+                            ? `<dd><a href="#${v['@id']}">${name}</a></dd>`
                             : `<dd ${config.SOURCE}="${getValue(v.source, 'citationSource')}">${getValue(v)}</dd>`
                     })
                 } else {
-                    if (typeof value === "string") {
+                    if (typeof value === 'string') {
                         value = {
                             value: value,
                             source: {
-                                citationSource: obj['@id'] || obj.id || "",
-                                citationNote: "Primitive object from DEER",
-                                comment: "Learn about the assembler for this object at https://github.com/CenterForDigitalHumanities/deer"
+                                citationSource: obj['@id'] || obj.id || '',
+                                citationNote: 'Primitive object from DEER',
+                                comment: 'Learn about the assembler for this object at https://github.com/CenterForDigitalHumanities/deer'
                             }
                         }
                     }
                     let v = getValue(value)
-                    if (typeof v === "object") v = getLabel(v)
-                    if (v === "[ unlabeled ]") v = v['@id'] || v.id || "[ complex value unknown ]"
+                    if (typeof v === 'object') v = getLabel(v)
+                    if (v === '[ unlabeled ]') v = v['@id'] || v.id || '[ complex value unknown ]'
                     list += (value['@id'])
                         ? `<dd ${config.SOURCE}="${getValue(value.source, 'citationSource')}"><a href="${options.link || ''}#${value['@id']}">${v}</a></dd>`
                         : `<dd ${config.SOURCE}="${getValue(value, 'citationSource')}">${v}</dd>`
                 }
             }
         }
-        tmpl += (list.includes("</dd>")) ? `<dl>${list}</dl>` : ''
+        tmpl += (list.includes('</dd>')) ? `<dl>${list}</dl>` : ''
         this.innerHTML = tmpl
     }
 }

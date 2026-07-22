@@ -17,8 +17,8 @@ class DeerPersonDates extends HTMLElement {
         }
         // Query for events with hasAgent = person id
         const query = {
-            "__rerum.history.next": { "$exists": true, "$size": 0 },
-            "body.hasAgent.value": { $in: [id.replace(/^https?:/, 'https:')] }
+            '__rerum.history.next': { '$exists': true, '$size': 0 },
+            'body.hasAgent.value': { $in: [id.replace(/^https?:/, 'https:')] }
         }
         const events = await fetch('https://tinydev.rerum.io/query', {
             method: 'POST',

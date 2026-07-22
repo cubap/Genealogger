@@ -8,7 +8,7 @@ class DeerJsonTemplate extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Loading...</span>`
+        this.innerHTML = '<span>Loading...</span>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -29,9 +29,9 @@ class DeerJsonTemplate extends HTMLElement {
         const indent = options.indent || 4
         const replacer = (k, v) => (config.SUPPRESS.includes(k) ? null : v)
         try {
-            this.innerHTML = `<pre>${JSON.stringify(obj, replacer, indent)}</pre>`
+            this.innerHTML = '<pre>' + JSON.stringify(obj, replacer, indent) + '</pre>'
         } catch (err) {
-            this.innerHTML = `<span>Error rendering JSON</span>`
+            this.innerHTML = '<span>Error rendering JSON</span>'
         }
     }
 }

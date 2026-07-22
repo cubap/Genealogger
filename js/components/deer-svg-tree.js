@@ -10,7 +10,7 @@ class DeerSvgTree extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Loading...</span>`
+        this.innerHTML = '<span>Loading...</span>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -30,7 +30,7 @@ class DeerSvgTree extends HTMLElement {
         
         const data = await this.transformData(obj)
         if (!data) {
-            this.innerHTML = `<span>Error: Unable to load tree data</span>`
+            this.innerHTML = '<span>Error: Unable to load tree data</span>'
             return
         }
 
@@ -235,10 +235,10 @@ class DeerSvgTree extends HTMLElement {
                         .attr('class', 'void-parent')
                         .html(d => {
                             let buttons = ''
-                            if (d.data.hasOwnProperty('hasFather')) {
+                            if (Object.prototype.hasOwnProperty.call(d.data, 'hasFather')) {
                                 buttons += `[ <a href="parents.html?#${d.data.id}">add father</a> ] `
                             }
-                            if (d.data.hasOwnProperty('hasMother')) {
+                            if (Object.prototype.hasOwnProperty.call(d.data, 'hasMother')) {
                                 buttons += `[ <a href="parents.html?#${d.data.id}">add mother</a> ]`
                             }
                             return buttons
@@ -459,7 +459,7 @@ class DeerSvgTree extends HTMLElement {
         }
         const data = await this.transformData(obj)
         if (!data) {
-            this.innerHTML = `<span>Error: Unable to load tree data</span>`
+            this.innerHTML = '<span>Error: Unable to load tree data</span>'
             return
         }
         this.innerHTML = ''

@@ -19,12 +19,12 @@ import { default as DEER } from './deer-config.js'
 
 // sandbox repository URLS
 DEER.URLS = {
-    BASE_ID: "https://devstore.rerum.io/v1",
-    CREATE: "https://tinydev.rerum.io/create",
-    UPDATE: "https://tinydev.rerum.io/update",
-    QUERY: "https://tinydev.rerum.io/query",
-    OVERWRITE: "https://tinydev.rerum.io/overwrite",
-    SINCE: "https://devstore.rerum.io/v1/since"
+    BASE_ID: 'https://devstore.rerum.io/v1',
+    CREATE: 'https://tinydev.rerum.io/create',
+    UPDATE: 'https://tinydev.rerum.io/update',
+    QUERY: 'https://tinydev.rerum.io/query',
+    OVERWRITE: 'https://tinydev.rerum.io/overwrite',
+    SINCE: 'https://devstore.rerum.io/v1/since'
 }
 // Render is probably needed by all items, but can be removed.
 // CDN at https://centerfordigitalhumanities.github.io/deer/releases/

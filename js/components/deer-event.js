@@ -9,7 +9,7 @@ class DeerEventTemplate extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Loading...</span>`
+        this.innerHTML = '<span>Loading...</span>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -27,9 +27,9 @@ class DeerEventTemplate extends HTMLElement {
             }
         }
         try {
-            this.innerHTML = `<h1>${getLabel(obj)}</h1>`
+            this.innerHTML = '<h1>' + getLabel(obj) + '</h1>'
         } catch (err) {
-            this.innerHTML = `<span>Error loading event</span>`
+            this.innerHTML = '<span>Error loading event</span>'
         }
     }
 }

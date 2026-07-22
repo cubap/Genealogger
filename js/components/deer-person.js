@@ -9,7 +9,7 @@ class DeerPersonTemplate extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Loading...</span>`
+        this.innerHTML = '<span>Loading...</span>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -27,17 +27,17 @@ class DeerPersonTemplate extends HTMLElement {
             }
         }
 
-        const { key: birthKey = "birthDate", label: birthLabel = "Birth Date" } = {}
-        const { key: deathKey = "deathDate", label: deathLabel = "Death Date" } = {}
-        const dob = `<deer-prop-template data-obj='${JSON.stringify(obj)}' data-options='{"key": "${birthKey}", "label": "${birthLabel}"}'></deer-prop-template>`
-        const dod = `<deer-prop-template data-obj='${JSON.stringify(obj)}' data-options='{"key": "${deathKey}", "label": "${deathLabel}"}'></deer-prop-template>`
+        const { key: birthKey = 'birthDate', label: birthLabel = 'Birth Date' } = {}
+        const { key: deathKey = 'deathDate', label: deathLabel = 'Death Date' } = {}
+        const dob = '<deer-prop-template data-obj=\'' + JSON.stringify(obj) + '\' data-options=\'{"key": "' + birthKey + '", "label": "' + birthLabel + '"}\'></deer-prop-template>'
+        const dod = '<deer-prop-template data-obj=\'' + JSON.stringify(obj) + '\' data-options=\'{"key": "' + deathKey + '", "label": "' + deathLabel + '"}\'></deer-prop-template>'
 
-        const famName = obj.familyName ? getValue(obj.familyName) : "[ unknown ]"
-        const givenName = obj.givenName ? getValue(obj.givenName) : ""
-        let tmpl = `<h2>${getLabel(obj)}</h2>`
-        tmpl += (obj.familyName || obj.givenName) ? `<div>Name: ${famName}, ${givenName}</div>` : ''
+        const famName = obj.familyName ? getValue(obj.familyName) : '[ unknown ]'
+        const givenName = obj.givenName ? getValue(obj.givenName) : ''
+        let tmpl = '<h2>' + getLabel(obj) + '</h2>'
+        tmpl += (obj.familyName || obj.givenName) ? '<div>Name: ' + famName + ', ' + givenName + '</div>' : ''
         tmpl += dob + dod
-        tmpl += `<a href="#${obj["@id"]}">${getLabel(obj)}</a>`
+        tmpl += '<a href="#' + obj['@id'] + '">' + getLabel(obj) + '</a>'
         this.innerHTML = tmpl
     }
 }

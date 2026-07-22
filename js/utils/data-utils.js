@@ -18,16 +18,16 @@ export function httpsQueryArray(id) {
  */
 export function getValue(property, alsoPeek = [], asType) {
     let prop
-    if (property === undefined || property === "") {
-        console.error("Value of property to lookup is missing!")
+    if (property === undefined || property === '') {
+        console.error('Value of property to lookup is missing!')
         return undefined
     }
     if (Array.isArray(property)) {
         return property.map(p => getValue(p, alsoPeek, asType))
     } else {
-        if (typeof property === "object") {
+        if (typeof property === 'object') {
             if (!Array.isArray(alsoPeek)) alsoPeek = [alsoPeek]
-            alsoPeek = alsoPeek.concat(["@value", "value", "$value", "val"])
+            alsoPeek = alsoPeek.concat(['@value', 'value', '$value', 'val'])
             for (let k of alsoPeek) {
                 if (property.hasOwnProperty(k)) {
                     prop = property[k]
@@ -42,22 +42,22 @@ export function getValue(property, alsoPeek = [], asType) {
     }
     try {
         switch (asType?.toUpperCase?.()) {
-            case "STRING":
-                prop = prop.toString()
-                break
-            case "NUMBER":
-                prop = parseFloat(prop)
-                break
-            case "INTEGER":
-                prop = parseInt(prop)
-                break
-            case "BOOLEAN":
-                prop = !Boolean(["false", "no", "0", "", "undefined", "null"].indexOf(String(prop).toLowerCase().trim()))
-                break
-            default:
+        case 'STRING':
+            prop = prop.toString()
+            break
+        case 'NUMBER':
+            prop = parseFloat(prop)
+            break
+        case 'INTEGER':
+            prop = parseInt(prop)
+            break
+        case 'BOOLEAN':
+            prop = !['false', 'no', '0', '', 'undefined', 'null'].indexOf(String(prop).toLowerCase().trim())
+            break
+        default:
         }
     } catch (err) {
-        if (asType) throw new Error("asType: '" + asType + "' is not possible.\n" + err.message)
+        if (asType) throw new Error('asType: \'' + asType + '\' is not possible.\n' + err.message)
     } finally {
         return (Array.isArray(prop) && prop.length === 1) ? prop[0] : prop
     }
@@ -83,20 +83,20 @@ export function getEventDates(personObj, allEvents = []) {
 }
 
 export function cleanArray(arr) {
-    return arr.filter(arrItem => ["string", "number"].includes(typeof arrItem))
+    return arr.filter(arrItem => ['string', 'number'].includes(typeof arrItem))
 }
 
 export function getArrayFromObj(containerObj, inputElem, DEER) {
     let cleanArrayResult = []
-    let alsoPeek = ["@value", "value", "$value", "val"]
+    let alsoPeek = ['@value', 'value', '$value', 'val']
     for (let k of alsoPeek) {
         if (containerObj.hasOwnProperty(k)) {
             containerObj = containerObj[k]
             break
         }
     }
-    let objType = containerObj.type || containerObj["@type"] || ""
-    let arrKey = (inputElem !== null && inputElem.hasAttribute(DEER.LIST)) ? inputElem.getAttribute(DEER.LIST) : ""
+    let objType = containerObj.type || containerObj['@type'] || ''
+    let arrKey = (inputElem !== null && inputElem.hasAttribute(DEER.LIST)) ? inputElem.getAttribute(DEER.LIST) : ''
     if (Array.isArray(objType)) {
         for (let t of objType) {
             if (DEER.CONTAINERS.includes(t)) {
@@ -106,16 +106,16 @@ export function getArrayFromObj(containerObj, inputElem, DEER) {
         }
     }
     if (DEER.CONTAINERS.includes(objType)) {
-        if (["Set", "List", "set", "list", "@set", "@list"].includes(objType)) {
-            if (arrKey === "") {
-                arrKey = "items"
+        if (['Set', 'List', 'set', 'list', '@set', '@list'].includes(objType)) {
+            if (arrKey === '') {
+                arrKey = 'items'
             }
             if (containerObj.hasOwnProperty(arrKey)) {
                 cleanArrayResult = cleanArray(containerObj[arrKey])
             }
-        } else if (["ItemList"].includes(objType)) {
-            if (arrKey === "") {
-                arrKey = "itemListElement"
+        } else if (['ItemList'].includes(objType)) {
+            if (arrKey === '') {
+                arrKey = 'itemListElement'
             }
             if (containerObj.hasOwnProperty(arrKey)) {
                 cleanArrayResult = cleanArray(containerObj[arrKey])
@@ -166,10 +166,10 @@ export async function fetchWithCache(id, forceRefresh = false) {
  * @param {boolean} forceRefresh - If true, bypass cache for the main entity fetch.
  * @returns {Promise<object>} The expanded object.
  */
-export async function expand(entity, matchOn = ["__rerum.generatedBy", "creator"], forceRefresh = false) {
-    let findId = entity["@id"] || entity.id || entity
-    if (typeof findId !== "string") {
-        console.warn("Unable to find URI in object:", entity)
+export async function expand(entity, matchOn = ['__rerum.generatedBy', 'creator'], forceRefresh = false) {
+    let findId = entity['@id'] || entity.id || entity
+    if (typeof findId !== 'string') {
+        console.warn('Unable to find URI in object:', entity)
         return entity
     }
     findId = findId.replace(/https?:/, 'https:')
@@ -181,18 +181,18 @@ export async function expand(entity, matchOn = ["__rerum.generatedBy", "creator"
             let body = anno.body
             if (!body) continue
             if (body.evidence) {
-                obj.evidence = typeof body.evidence === "object" ? body.evidence["@id"] : body.evidence
+                obj.evidence = typeof body.evidence === 'object' ? body.evidence['@id'] : body.evidence
             }
             const bodies = Array.isArray(body) ? body : [body]
             for (const assertion of bodies) {
                 const keys = Object.keys(assertion)
                 if (keys.length !== 1) {
-                    console.warn("This assertion is not as expected and may not have been interpreted correctly.", assertion)
+                    console.warn('This assertion is not as expected and may not have been interpreted correctly.', assertion)
                 }
                 for (const k of keys) {
                     const val = assertion[k]
                     if (obj.hasOwnProperty(k)) {
-                        if (typeof obj[k] === "string") {
+                        if (typeof obj[k] === 'string') {
                             obj[k] = val
                         } else if (Array.isArray(obj[k])) {
                             obj[k].push(val)
@@ -312,26 +312,26 @@ export function handleHTTPError(response) {
     if (!response.ok) {
         const status = response.status
         switch (status) {
-            case 400:
-                console.warn('Bad Request')
-                break
-            case 401:
-                console.warn('Request was unauthorized')
-                break
-            case 403:
-                console.warn('Forbidden to make request')
-                break
-            case 404:
-                console.warn('Not found')
-                break
-            case 500:
-                console.warn('Internal server error')
-                break
-            case 503:
-                console.warn('Server down time')
-                break
-            default:
-                console.warn('Unhandled HTTP ERROR')
+        case 400:
+            console.warn('Bad Request')
+            break
+        case 401:
+            console.warn('Request was unauthorized')
+            break
+        case 403:
+            console.warn('Forbidden to make request')
+            break
+        case 404:
+            console.warn('Not found')
+            break
+        case 500:
+            console.warn('Internal server error')
+            break
+        case 503:
+            console.warn('Server down time')
+            break
+        default:
+            console.warn('Unhandled HTTP ERROR')
         }
         throw Error('HTTP Error: ' + response.statusText)
     }

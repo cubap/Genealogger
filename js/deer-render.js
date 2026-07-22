@@ -22,71 +22,73 @@ const logger = new ErrorLogger({
 })
 
 import { default as config } from './deer-config.js'
-import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm'
-import DeerJsonTemplate from './components/deer-json.js'
-import DeerPropTemplate from './components/deer-prop.js'
-import DeerLabelTemplate from './components/deer-label.js'
-import DeerEntityTemplate from './components/deer-entity.js'
-import DeerListTemplate from './components/deer-list.js'
-import DeerPersonTemplate from './components/deer-person.js'
-import DeerEventTemplate from './components/deer-event.js'
-import DeerChildrenListTemplate from './components/deer-children-list.js'
-import DeerTimelineTemplate from './components/deer-timeline.js'
-import DeerTreeTemplate from './components/deer-tree.js'
-import DeerSvgTree from './components/deer-svg-tree.js'
-import { expand, getValue, getArrayFromObj } from './utils/data-utils.js'
-import { warning, broadcast, assertElementValue } from './utils/dom-utils.js'
-import { stringifyArray } from './utils/string-utils.js'
+import { expand } from './utils/data-utils.js'
+import { broadcast } from './utils/dom-utils.js'
+// Import components to register custom elements
+import './components/deer-json.js'
+import './components/deer-prop.js'
+import './components/deer-label.js'
+import './components/deer-entity.js'
+import './components/deer-list.js'
+import './components/deer-person.js'
+import './components/deer-event.js'
+import './components/deer-children-list.js'
+import './components/deer-timeline.js'
+import './components/deer-tree.js'
+import './components/deer-svg-tree.js'
 
 const changeLoader = new MutationObserver(renderChange)
 var DEER = config
 
 /**
  * Observer callback for rendering newly loaded objects. Checks the
- * mutationsList for "deep-object" attribute changes.
+ * mutationsList for 'deep-object' attribute changes.
  * @param {Array} mutationsList of MutationRecord objects
  */
 async function renderChange(mutationsList) {
     for (var mutation of mutationsList) {
         switch (mutation.attributeName) {
-            case DEER.ID:
-            case DEER.KEY:
-            case DEER.LINK:
-            case DEER.LIST:
-                let id = mutation.target.getAttribute(DEER.ID)
-                if (id === "null" || mutation.target.getAttribute(DEER.COLLECTION))
-                    return null
-                let obj = {}
-                try {
-                    obj = JSON.parse(localStorage.getItem(id))
-                } catch (err) {}
-                if (!obj || !obj["@id"]) {
-                    obj = await fetch(id).then(response => response.json()).catch(error => {
-                        logger.critical(error, {
-                            component: 'DeerRender',
-                            action: 'fetch_entity',
-                            entityId: id
-                        })
-                        return error
+        case DEER.ID:
+        case DEER.KEY:
+        case DEER.LINK:
+        case DEER.LIST: {
+            const id = mutation.target.getAttribute(DEER.ID)
+            if (id === 'null' || mutation.target.getAttribute(DEER.COLLECTION))
+                return null
+            let obj = {}
+            try {
+                obj = JSON.parse(localStorage.getItem(id))
+            } catch (err) { /* ignore parse errors */ }
+            if (!obj || !obj['@id']) {
+                obj = await fetch(id).then(response => response.json()).catch(error => {
+                    logger.critical(error, {
+                        component: 'DeerRender',
+                        action: 'fetch_entity',
+                        entityId: id
                     })
-                    if (obj) {
-                        localStorage.setItem(obj["@id"] || obj.id, JSON.stringify(obj))
-                    } else {
-                        return false
+                    return error
+                })
+                if (obj) {
+                    localStorage.setItem(obj['@id'] || obj.id, JSON.stringify(obj))
+                } else {
+                    return false
+                }
+            }
+            RENDER.element(mutation.target, obj)
+            break
+        }
+        case DEER.LISTENING: {
+            const listensTo = mutation.target.getAttribute(DEER.LISTENING)
+            if (listensTo) {
+                mutation.target.addEventListener(DEER.EVENTS.CLICKED, e => {
+                    const loadId = e.detail['@id']
+                    if (loadId === listensTo) {
+                        mutation.target.setAttribute('deer-id', loadId)
                     }
-                }
-                RENDER.element(mutation.target, obj)
-                break
-            case DEER.LISTENING:
-                let listensTo = mutation.target.getAttribute(DEER.LISTENING)
-                if (listensTo) {
-                    mutation.target.addEventListener(DEER.EVENTS.CLICKED, e => {
-                        let loadId = e.detail["@id"]
-                        if (loadId === listensTo) {
-                            mutation.target.setAttribute("deer-id", loadId)
-                        }
-                    })
-                }
+                })
+            }
+            break
+        }
         }
     }
 }
@@ -100,41 +102,41 @@ RENDER.element = function (elem, obj) {
         let customTag = elem.tagName.toLowerCase()
         let customElem
         switch (customTag) {
-            case 'deer-json':
-                customElem = document.createElement('deer-json')
-                break
-            case 'deer-prop':
-                customElem = document.createElement('deer-prop')
-                break
-            case 'deer-label':
-                customElem = document.createElement('deer-label')
-                break
-            case 'deer-entity':
-                customElem = document.createElement('deer-entity')
-                break
-            case 'deer-list':
-                customElem = document.createElement('deer-list')
-                break
-            case 'deer-person':
-                customElem = document.createElement('deer-person')
-                break
-            case 'deer-event':
-                customElem = document.createElement('deer-event')
-                break
-            case 'deer-children-list':
-                customElem = document.createElement('deer-children-list')
-                break
-            case 'deer-timeline':
-                customElem = document.createElement('deer-timeline')
-                break
-            case 'deer-tree':
-                customElem = document.createElement('deer-tree')
-                break
-            case 'deer-svg-tree':
-                customElem = document.createElement('deer-svg-tree')
-                break
-            default:
-                customElem = document.createElement('deer-json')
+        case 'deer-json':
+            customElem = document.createElement('deer-json')
+            break
+        case 'deer-prop':
+            customElem = document.createElement('deer-prop')
+            break
+        case 'deer-label':
+            customElem = document.createElement('deer-label')
+            break
+        case 'deer-entity':
+            customElem = document.createElement('deer-entity')
+            break
+        case 'deer-list':
+            customElem = document.createElement('deer-list')
+            break
+        case 'deer-person':
+            customElem = document.createElement('deer-person')
+            break
+        case 'deer-event':
+            customElem = document.createElement('deer-event')
+            break
+        case 'deer-children-list':
+            customElem = document.createElement('deer-children-list')
+            break
+        case 'deer-timeline':
+            customElem = document.createElement('deer-timeline')
+            break
+        case 'deer-tree':
+            customElem = document.createElement('deer-tree')
+            break
+        case 'deer-svg-tree':
+            customElem = document.createElement('deer-svg-tree')
+            break
+        default:
+            customElem = document.createElement('deer-json')
         }
         customElem.setAttribute('data-obj', JSON.stringify(obj))
         Array.from(elem.attributes).forEach(attr => customElem.setAttribute(attr.name, attr.value))
@@ -170,7 +172,7 @@ RENDER.element = function (elem, obj) {
 export default class DeerRender {
     constructor(elem, deer = {}) {
         for (let key in DEER) {
-            if (typeof DEER[key] === "string") {
+            if (typeof DEER[key] === 'string') {
                 DEER[key] = deer[key] || config[key]
             } else {
                 DEER[key] = Object.assign(config[key], deer[key])
@@ -186,8 +188,8 @@ export default class DeerRender {
 
         try {
             if (!(this.id || this.collection)) {
-                let err = new Error(this.id + " is not a valid id.")
-                err.code = "NO_ID"
+                let err = new Error(this.id + ' is not a valid id.')
+                err.code = 'NO_ID'
                 throw err
             } else {
                 if (this.id) {
@@ -195,18 +197,18 @@ export default class DeerRender {
                 } else if (this.collection) {
                     // Look not only for direct objects, but also collection annotations
                     // Only the most recent, do not consider history parent or children history nodes
-                    let historyWildcard = { "$exists": true, "$size": 0 }
+                    let historyWildcard = { '$exists': true, '$size': 0 }
                     let queryObj = {
                         $or: [{
-                            "targetCollection": this.collection
+                            'targetCollection': this.collection
                         }, {
-                            "body.targetCollection": this.collection
+                            'body.targetCollection': this.collection
                         }],
-                        "__rerum.history.next": historyWildcard
+                        '__rerum.history.next': historyWildcard
                     }
                     fetch(DEER.URLS.QUERY + '?limit=100', {
-                        method: "POST",
-                        mode: "cors",
+                        method: 'POST',
+                        mode: 'cors',
                         headers: new Headers({
                             'Content-Type': 'application/json; charset=utf-8'
                         }),
@@ -215,25 +217,27 @@ export default class DeerRender {
                         .then(pointers => {
                             let list = []
                             pointers.map(tc => {
-                                let tid = tc.target || tc["@id"] || tc.id
+                                let tid = tc.target || tc['@id'] || tc.id
                                 tid = tid?.replace(/https?:/, 'https:')
                                 return list.push(fetch(tid)
                                     .then(response => response.json())
                                     .catch(err => {
-                                        __deleted: console.log(err)
+                                        console.log(err)
                                     }))
                             })
-                            return Promise.all(list).then(l => l.filter(i => !i.hasOwnProperty("__deleted")))
+                            return Promise.all(list).then(l => l.filter(i => !Object.prototype.hasOwnProperty.call(i, '__deleted')))
                         })
                         .then(list => {
                             let listObj = {
                                 name: this.collection,
                                 itemListElement: list
                             }
-                            this.elem.setAttribute(DEER.LIST, "itemListElement")
+                            this.elem.setAttribute(DEER.LIST, 'itemListElement')
                             try {
-                                listObj["@type"] = list[0]["@type"] || list[0].type || "ItemList"
-                            } catch (err) {}
+                                listObj['@type'] = list[0]['@type'] || list[0].type || 'ItemList'
+                            } catch (err) {
+                                // ignore type assignment errors
+                            }
                             const deerList = document.createElement('deer-list')
                             deerList.setAttribute('data-obj', JSON.stringify(listObj))
                             deerList.setAttribute('data-options', JSON.stringify({ list: this.elem.getAttribute(DEER.LIST), link: this.elem.getAttribute(DEER.LINK) }))
@@ -246,8 +250,8 @@ export default class DeerRender {
         } catch (err) {
             let message = err
             switch (err.code) {
-                case "NO_ID":
-                    message = elem.innerHTML // No DEER.ID, so do not change
+            case 'NO_ID':
+                message = elem.innerHTML // No DEER.ID, so do not change
             }
             elem.innerHTML = message
         }
@@ -256,14 +260,16 @@ export default class DeerRender {
         if (listensTo) {
             elem.addEventListener(DEER.EVENTS.CLICKED, e => {
                 try {
-                    if (e.detail.target.closest(DEER.VIEW + "," + DEER.FORM).getAttribute("id") === listensTo)
+                    if (e.detail.target.closest(DEER.VIEW + ',' + DEER.FORM).getAttribute('id') === listensTo)
                         elem.setAttribute(DEER.ID, e.detail.target.closest('[' + DEER.ID + ']').getAttribute(DEER.ID))
-                } catch (err) {}
+                } catch (err) {
+                    // ignore click handler errors
+                }
             })
             try {
-                window[listensTo].addEventListener("click", e => broadcast(e, DEER.EVENTS.CLICKED, elem))
+                window[listensTo].addEventListener('click', e => broadcast(e, DEER.EVENTS.CLICKED, elem))
             } catch (err) {
-                console.error("There is no HTML element with id " + listensTo + " to attach an event to")
+                console.error('There is no HTML element with id ' + listensTo + ' to attach an event to')
             }
         }
     }

@@ -9,7 +9,7 @@ class DeerPropTemplate extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Loading...</span>`
+        this.innerHTML = '<span>Loading...</span>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -27,13 +27,13 @@ class DeerPropTemplate extends HTMLElement {
             }
         }
         const options = JSON.parse(this.getAttribute('data-options') || '{}')
-        const key = options.key || "@id"
-        const prop = obj[key] || "[ undefined ]"
+        const key = options.key || '@id'
+        const prop = obj[key] || '[ undefined ]'
         const label = options.label || getLabel(obj, prop)
         try {
-            this.innerHTML = `<span class="${prop}">${label}: ${getValue(prop) || "[ undefined ]"}</span>`
+            this.innerHTML = '<span class="' + prop + '">' + label + ': ' + (getValue(prop) || '[ undefined ]') + '</span>'
         } catch (err) {
-            this.innerHTML = `<span>Error loading data</span>`
+            this.innerHTML = '<span>Error loading data</span>'
         }
     }
 }

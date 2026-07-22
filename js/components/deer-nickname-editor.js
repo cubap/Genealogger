@@ -13,7 +13,7 @@ class DeerNicknameEditor extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<div>Loading...</div>`
+        this.innerHTML = '<div>Loading...</div>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -26,7 +26,7 @@ class DeerNicknameEditor extends HTMLElement {
     async loadPerson(forceRefresh = false) {
         const id = this.getAttribute(config.ID)
         if (id) {
-            this.person = await expand(id, ["__rerum.generatedBy", "creator"], forceRefresh)
+            this.person = await expand(id, ['__rerum.generatedBy', 'creator'], forceRefresh)
         }
     }
 

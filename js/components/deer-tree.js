@@ -9,7 +9,7 @@ class DeerTreeTemplate extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Loading...</span>`
+        this.innerHTML = '<span>Loading...</span>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -28,7 +28,7 @@ class DeerTreeTemplate extends HTMLElement {
         }
 
         const params = new URLSearchParams(location.search)
-        const showall = true || params.get("showall") // always show all details
+        const showall = true || params.get('showall') // always show all details
         if (showall) {
             config.showall = true
         }
@@ -125,26 +125,26 @@ class DeerTreeTemplate extends HTMLElement {
                     }
                 </style>
                 <div class="tree-detail">
-                    <a href="#${obj["@id"]}" title="Click to View">
+                    <a href="#${obj['@id']}" title="Click to View">
                         <deer-label deer-template="personDates" deer-id="${obj['@id']}">${getLabel(obj)}</deer-label>
                     </a>
                     <div class="parents">
                         ${obj.hasFather
-                    ? `<deer-tree ${config.showall ? `deer-id` : `data-uri`}="${getValue(obj.hasFather)}">loading father...</deer-tree>`
-                    : `<div class="void-parent">[ <a href="parents.html?#${obj['@id']}">add father</a> ]</div>`}
+        ? `<deer-tree ${config.showall ? 'deer-id' : 'data-uri'}="${getValue(obj.hasFather)}">loading father...</deer-tree>`
+        : '<div class="void-parent">[ <a href="parents.html?#' + obj['@id'] + '">add father</a> ]</div>'}
                         ${obj.hasMother
-                    ? `<deer-tree ${config.showall ? `deer-id` : `data-uri`}="${getValue(obj.hasMother)}">loading mother...</deer-tree>`
-                    : `<div class="void-parent">[ <a href="parents.html?#${obj['@id']}">add mother</a> ]</div>`}
+        ? `<deer-tree ${config.showall ? 'deer-id' : 'data-uri'}="${getValue(obj.hasMother)}">loading mother...</deer-tree>`
+        : '<div class="void-parent">[ <a href="parents.html?#' + obj['@id'] + '">add mother</a> ]</div>'}
                     </div>
                 </div>
             `
             this.innerHTML = tmpl
 
-            Array.from(this.querySelectorAll(".parents > [data-uri]")).forEach(node => {
-                node.onclick = ev => ev.target.closest("deer-tree").setAttribute(config.ID, ev.target.closest("deer-tree").getAttribute("data-uri"))
+            Array.from(this.querySelectorAll('.parents > [data-uri]')).forEach(node => {
+                node.onclick = ev => ev.target.closest('deer-tree').setAttribute(config.ID, ev.target.closest('deer-tree').getAttribute('data-uri'))
             })
         } catch (err) {
-            this.innerHTML = `<span>Error loading tree</span>`
+            this.innerHTML = '<span>Error loading tree</span>'
         }
     }
 }

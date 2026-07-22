@@ -9,7 +9,7 @@ class DeerChildrenListTemplate extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Seeking children...</span>`
+        this.innerHTML = '<span>Seeking children...</span>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -31,12 +31,12 @@ class DeerChildrenListTemplate extends HTMLElement {
         const getChildren = async () => {
             const query = {
                 $or: [
-                    { "body.hasFather.value": httpsQueryArray(obj["@id"]) },
-                    { "body.hasMother.value": httpsQueryArray(obj["@id"]) }
+                    { 'body.hasFather.value': httpsQueryArray(obj['@id']) },
+                    { 'body.hasMother.value': httpsQueryArray(obj['@id']) }
                 ],
-                "__rerum.history.next": { "$exists": true, "$size": 0 }
+                '__rerum.history.next': { '$exists': true, '$size': 0 }
             }
-            const annos = await fetch("https://tinydev.rerum.io/query", {
+            const annos = await fetch('https://tinydev.rerum.io/query', {
                 method: 'POST',
                 mode: 'cors',
                 headers: { 'Content-Type': 'application/json' },

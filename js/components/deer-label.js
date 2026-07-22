@@ -8,7 +8,7 @@ class DeerLabelTemplate extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Loading...</span>`
+        this.innerHTML = '<span>Loading...</span>'
     }
 
     async attributeChangedCallback(name, oldValue, newValue) {
@@ -26,15 +26,15 @@ class DeerLabelTemplate extends HTMLElement {
             }
         }
         const options = JSON.parse(this.getAttribute('data-options') || '{}')
-        const key = options.key || "@id"
-        const prop = obj[key] || "[ undefined ]"
+        const key = options.key || '@id'
+        const prop = obj[key] || '[ undefined ]'
         const label = getLabel(obj, prop)
         try {
             this.innerHTML = options.link
-                ? `<a href="${options.link + obj['@id']}">${label}</a>`
-                : `${label}`
+                ? '<a href="' + options.link + obj['@id'] + '">' + label + '</a>'
+                : label
         } catch (err) {
-            this.innerHTML = `<span>Error loading data</span>`
+            this.innerHTML = '<span>Error loading data</span>'
         }
     }
 }

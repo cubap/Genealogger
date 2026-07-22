@@ -9,7 +9,7 @@ class DeerAncestorTimeline extends HTMLElement {
     }
 
     async connectedCallback() {
-        this.innerHTML = `<span>Loading ancestor timeline...</span>`
+        this.innerHTML = '<span>Loading ancestor timeline...</span>'
         
         // Check for URL hash with person ID
         const hash = window.location.hash
@@ -45,14 +45,14 @@ class DeerAncestorTimeline extends HTMLElement {
                     obj = await expand(id)
                 } catch (e) {
                     console.warn('Could not load person data:', e)
-                    this.innerHTML = `<div class="timeline-error">Could not load person data. <button onclick="this.parentElement.parentElement.setAttribute('demo', 'true')">Try Demo</button></div>`
+                    this.innerHTML = '<div class="timeline-error">Could not load person data. <button onclick="this.parentElement.parentElement.setAttribute(\'demo\', \'true\')">Try Demo</button></div>'
                     return
                 }
             }
         }
 
         if (!obj || !obj['@id']) {
-            this.innerHTML = `<div class="timeline-error">Please select a person to view their ancestor timeline</div>`
+            this.innerHTML = '<div class="timeline-error">Please select a person to view their ancestor timeline</div>'
             return
         }
 
@@ -164,8 +164,8 @@ class DeerAncestorTimeline extends HTMLElement {
     async getPersonEvents(personId, events) {
         try {
             const query = {
-                "__rerum.history.next": { "$exists": true, "$size": 0 },
-                "body.hasAgent.value": { $in: [personId.replace(/^https?:/, 'https:')] }
+                '__rerum.history.next': { '$exists': true, '$size': 0 },
+                'body.hasAgent.value': { $in: [personId.replace(/^https?:/, 'https:')] }
             }
             
             const eventAnnotations = await fetch('https://tinydev.rerum.io/query', {
@@ -581,8 +581,8 @@ class DeerAncestorTimeline extends HTMLElement {
             const childBaptism = events.get(`${person.id}-Baptism`)
             // Use birth date, or baptism if no birth, or estimate
             const childBirthDate = childBirth?.date ? new Date(childBirth.date) : 
-                                 childBaptism?.date ? new Date(childBaptism.date) : 
-                                 new Date(2000, 0, 1)
+                childBaptism?.date ? new Date(childBaptism.date) : 
+                    new Date(2000, 0, 1)
             const childX = xScale(childBirthDate)
             
             if (person.fatherId && persons.has(person.fatherId)) {
@@ -734,8 +734,8 @@ class DeerAncestorTimeline extends HTMLElement {
                 if (target.personData) {
                     const d = target.personData
                     const birthStr = d.birthEvent ? d.birthEvent.date : 
-                                   d.baptismEvent ? `~${new Date(new Date(d.baptismEvent.date).getFullYear() - 1, new Date(d.baptismEvent.date).getMonth(), new Date(d.baptismEvent.date).getDate()).toISOString().split('T')[0]} (est. from baptism)` : 
-                                   'Unknown'
+                        d.baptismEvent ? `~${new Date(new Date(d.baptismEvent.date).getFullYear() - 1, new Date(d.baptismEvent.date).getMonth(), new Date(d.baptismEvent.date).getDate()).toISOString().split('T')[0]} (est. from baptism)` : 
+                            'Unknown'
                     const deathStr = d.deathEvent ? d.deathEvent.date : 'Unknown'
                     tooltip.innerHTML = `
                         <b>${d.name}</b><br>

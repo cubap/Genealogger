@@ -14,7 +14,7 @@ class PersonChip extends HTMLElement {
     async render() {
         const id = this.getAttribute('deer-id')
         if (!id) {
-            this.innerHTML = `<span class="chip">[no person]</span>`
+            this.innerHTML = '<span class="chip">[no person]</span>'
             return
         }
         const obj = await expand(id)
@@ -53,9 +53,9 @@ class PersonChip extends HTMLElement {
         let genderIcon = ''
         if (gender) {
             switch (gender.toLowerCase()[0]) {
-                case 'm': genderIcon = '♂️'; break
-                case 'f': genderIcon = '♀️'; break
-                default: genderIcon = '⚧️'
+            case 'm': genderIcon = '♂️'; break
+            case 'f': genderIcon = '♀️'; break
+            default: genderIcon = '⚧️'
             }
         }
 
