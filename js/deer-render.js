@@ -13,6 +13,14 @@
  * @see tiny.rerum.io
  */
 
+import { ErrorLogger } from './utils/error-logger.js'
+
+// Initialize error logger for DEER framework
+const logger = new ErrorLogger({
+    environment: 'production',
+    appName: 'genealogger'
+})
+
 import { default as config } from './deer-config.js'
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm'
 import DeerJsonTemplate from './components/deer-json.js'
@@ -26,9 +34,9 @@ import DeerChildrenListTemplate from './components/deer-children-list.js'
 import DeerTimelineTemplate from './components/deer-timeline.js'
 import DeerTreeTemplate from './components/deer-tree.js'
 import DeerSvgTree from './components/deer-svg-tree.js'
-import { getValue, getArrayFromObj, cleanArray, httpsIdLinks, httpsQueryArray, expand } from './utils/data-utils.js'
-import { assertElementValue, broadcast, warning } from './utils/dom-utils.js'
-import { stringifyArray, getLabel } from './utils/string-utils.js'
+import { expand, getValue, getArrayFromObj } from './utils/data-utils.js'
+import { warning, broadcast, assertElementValue } from './utils/dom-utils.js'
+import { stringifyArray } from './utils/string-utils.js'
 
 const changeLoader = new MutationObserver(renderChange)
 var DEER = config
@@ -53,7 +61,14 @@ async function renderChange(mutationsList) {
                     obj = JSON.parse(localStorage.getItem(id))
                 } catch (err) {}
                 if (!obj || !obj["@id"]) {
-                    obj = await fetch(id).then(response => response.json()).catch(error => error)
+                    obj = await fetch(id).then(response => response.json()).catch(error => {
+                        logger.critical(error, {
+                            component: 'DeerRender',
+                            action: 'fetch_entity',
+                            entityId: id
+                        })
+                        return error
+                    })
                     if (obj) {
                         localStorage.setItem(obj["@id"] || obj.id, JSON.stringify(obj))
                     } else {
@@ -123,7 +138,16 @@ RENDER.element = function (elem, obj) {
         }
         customElem.setAttribute('data-obj', JSON.stringify(obj))
         Array.from(elem.attributes).forEach(attr => customElem.setAttribute(attr.name, attr.value))
-        elem.replaceWith(customElem)
+        try {
+            elem.replaceWith(customElem)
+        } catch (err) {
+            logger.critical(err, {
+                component: 'DeerRender',
+                action: 'render_element',
+                elementType: elem.tagName,
+                entityId: elem.getAttribute(DEER.ID)
+            })
+        }
         setTimeout(() => {
             let newViews = (customElem.querySelectorAll(config.VIEW).length) ? customElem.querySelectorAll(config.VIEW) : []
             let newForms = (customElem.querySelectorAll(config.FORM).length) ? customElem.querySelectorAll(config.VIEW) : []

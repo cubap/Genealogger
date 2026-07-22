@@ -1,6 +1,5 @@
 import { expand } from '../utils/data-utils.js'
 import { default as config } from '../deer-config.js'
-import { getValue, getArrayFromObj } from '../utils/data-utils.js'
 import { getLabel } from '../utils/string-utils.js'
 
 class DeerListTemplate extends HTMLElement {

@@ -1,3 +1,14 @@
+import { ErrorLogger } from './utils/error-logger.js'
+
+// Initialize error logger for DEER framework
+const logger = new ErrorLogger({
+    environment: 'production',
+    appName: 'genealogger'
+})
+
+// Set up global error handlers for uncaught exceptions and unhandled promise rejections
+logger.setupGlobalHandlers()
+
 export default {
     ID: "deer-id", // attribute, URI for resource to render
     TYPE: "deer-type", // attribute, JSON-LD @type

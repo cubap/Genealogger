@@ -1,7 +1,6 @@
 import { expand } from '../utils/data-utils.js'
 import { default as config } from '../deer-config.js'
-import { getValue, getArrayFromObj, cleanArray } from '../utils/data-utils.js'
-import { stringifyArray, getLabel } from '../utils/string-utils.js'
+import { getLabel } from '../utils/string-utils.js'
 
 class DeerJsonTemplate extends HTMLElement {
     static get observedAttributes() {

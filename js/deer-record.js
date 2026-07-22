@@ -13,9 +13,16 @@ import { default as config } from './deer-config.js'
 import { expand, getValue, getArrayFromObj } from './utils/data-utils.js'
 import { warning, broadcast, assertElementValue } from './utils/dom-utils.js'
 import { stringifyArray } from './utils/string-utils.js'
+import { ErrorLogger } from './utils/error-logger.js'
 
 const changeLoader = new MutationObserver(renderChange)
 var DEER = config
+
+// Initialize error logger for DEER framework
+const logger = new ErrorLogger({
+    environment: 'production',
+    appName: 'genealogger'
+})
 
 /**
  * @description Iterates through mutations on an element and performs actions based
@@ -38,7 +45,14 @@ async function renderChange(mutationsList) {
                     obj = JSON.parse(localStorage.getItem(id))
                 } catch (err) { }
                 if (!obj || !obj["@id"]) {
-                    obj = await fetch(id).then(response => response.json()).catch(error => error)
+                    obj = await fetch(id).then(response => response.json()).catch(error => {
+                        logger.critical(error, {
+                            component: 'DeerReport',
+                            action: 'fetch_entity',
+                            entityId: id
+                        })
+                        return error
+                    })
                     if (obj) {
                         localStorage.setItem(obj["@id"] || obj.id, JSON.stringify(obj))
                     } else {
@@ -289,7 +303,13 @@ export default class DeerReport {
                     broadcast(undefined, DEER.EVENTS.CREATED, self.elem, data.new_obj_state)
                     return data.new_obj_state
                 })
-                .catch(err => { })
+                .catch(err => {
+                    logger.critical(err, {
+                        component: 'DeerReport',
+                        action: 'create_entity',
+                        entityType: this.type
+                    })
+                })
         }
 
         formAction.then((function (entity) {
@@ -398,8 +418,15 @@ export default class DeerReport {
                             input.setAttribute(DEER.SOURCE, anno.new_obj_state["@id"])
                             if(anno.new_obj_state.evidence)input.setAttribute(DEER.EVIDENCE, anno.new_obj_state.evidence)
                             if(anno.new_obj_state.motivation)input.setAttribute(DEER.MOTIVATION, anno.new_obj_state.motivation)
-                            if(anno.new_obj_state.creator)input.setAttribute(DEER.ATTRIBUTION, anno.new_obj_state.creator)
-                    })
+                        })
+                        .catch(err => {
+                            logger.critical(err, {
+                                component: 'DeerReport',
+                                action: 'save_annotation',
+                                inputKey: input.getAttribute(DEER.KEY),
+                                inputId: inputId
+                            })
+                        })
                 })
             return Promise.all(annotations).then(() => entity)
         }).bind(this))
@@ -504,6 +531,14 @@ export default class DeerReport {
         })
             .then(response => response.json())
             .then(obj => { return obj.new_obj_state })
+            .catch(err => {
+                logger.critical(err, {
+                    component: 'DeerReport',
+                    action: 'simple_upsert',
+                    entityType: this.type,
+                    entityId: formId
+                })
+            })
     }
 }
 
@@ -544,6 +579,14 @@ async function create(obj, attribution, evidence) {
     })
         .then(this.handleHTTPError)
         .then(response => response.json())
+        .catch(err => {
+            logger.critical(err, {
+                component: 'DeerReport',
+                action: 'create_entity',
+                entityType: mint["@type"]
+            })
+            throw err
+        })
     const listID = localStorage.getItem("CURRENT_LIST_ID") || this.DEFAULT_LIST_ID
     let list = await get(listID)
     const objID = newObj.new_obj_state["@id"]

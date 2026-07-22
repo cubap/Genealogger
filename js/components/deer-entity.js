@@ -1,6 +1,5 @@
-import { expand } from '../utils/data-utils.js'
+import { expand, getValue } from '../utils/data-utils.js'
 import { default as config } from '../deer-config.js'
-import { getValue } from '../utils/data-utils.js'
 import { getLabel } from '../utils/string-utils.js'
 
 class DeerEntityTemplate extends HTMLElement {
