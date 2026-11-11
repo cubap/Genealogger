@@ -282,6 +282,13 @@ export class RerumStore {
 
     /**
      * All entities of a given '@type'.
+     *
+     * The result is a FLOOR, not a total: devstore `/query` returns at most 10
+     * documents and accepts no paging (see docs/devstore-query-contract.md). A
+     * caller that needs "everything of this type" must be scoped by something
+     * indexed instead. Each generation spells its '@type' differently (v1 stores
+     * the bare name, the new shape an array holding the subtype URI), so use
+     * `typeTokens()` to ask for both.
      * @param {string} type e.g. 'Person' or 'Event'
      * @returns {Promise<Array<Object>>} new-shape bare entities
      */

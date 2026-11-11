@@ -242,6 +242,12 @@ export function matchesQuery(label, query) {
  * The index/picker read: every bare Person as a list row, filtered and sorted,
  * from ONE `listByType` read. Labels come from `deriveLabel()`, so no
  * annotation is resolved for any row.
+ *
+ * LIMITATION (server-side, not fixable here): devstore `/query` returns at most
+ * 10 documents and has no paging, so this lists at most 10 people and the sort
+ * only orders that sample. Production data needs a scoped/paged read.
+ * There is also no collection scoping in the new stack, so this sees every
+ * Person document in the shared sandbox, not just Genealogger's.
  * @param {Object} [options]
  * @param {Object} [options.store]
  * @param {string} [options.query] filter text; every token must be in the label
