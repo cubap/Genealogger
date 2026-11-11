@@ -13,7 +13,7 @@ than stored in arrays on people.
 
 **DEER v2** — the Document-Entity-Editing-Relationship shape this app mirrors for
 its custom elements and data documents. Mirrored, not depended on: there is no
-import from the `antlers` repository (see `docs/adr/`).
+import from the `antlers` repository (ADR 0001, `docs/adr/`).
 
 ## Entities
 

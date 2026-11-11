@@ -144,7 +144,7 @@ Genealogger is deployed via GitHub Actions to GitHub Pages:
 
 - **A page shows `[ unlabeled ]`**: nothing names that entity — no cached `label` and no evidenced name claim. `label.html?person=<id>` fixes it.
 - **A fact is missing that you expect**: it is an annotation. Check that its `target` is the entity (for facts) or the Event (for relationships), and open the person's provenance view.
-- **An old record renders but edits look odd**: DEER v1 documents are read through the legacy adapter and converted lazily; the page says so in its banner. Save once to migrate.
+- **An old record renders but edits look odd**: DEER v1 documents are read through the legacy adapter and converted lazily; the page says so in its banner, and its inherited rows are read-only. Recording the fact again writes it in the new shape beside the old one — the v1 document is never rewritten, so both rows show until the old data is retired for good.
 - **`?store=local` shows nothing**: it is a separate sandbox from devstore and holds only what you saved in that browser.
 - **Lists look incomplete against devstore**: `POST /query` returns at most 10 documents with no paging (`docs/devstore-query-contract.md`). Counts are floors, not totals.
 
