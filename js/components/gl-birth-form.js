@@ -32,6 +32,8 @@ import './gl-evidence-picker.js'
 const FACT_KEYS = ['givenName', 'familyName', 'additionalName', 'alternateName', 'birthPlace', 'birthDate', 'gender']
 
 const PARTICIPANT_ROLES = [
+    { token: 'mother', label: 'Mother' },
+    { token: 'father', label: 'Father' },
     { token: 'parent', label: 'Parent' },
     { token: 'godparent', label: 'Godparent' },
     { token: 'informant', label: 'Informant' }
@@ -84,7 +86,10 @@ export class GLBirthForm extends HTMLElement {
     renderParticipantsChrome() {
         const list = this.querySelector('[data-participants]')
         if (!list) return
-        list.addEventListener('click', event => {
+        // Delegate on the host, not the list: the "+ Add participant" button is
+        // a sibling of [data-participants] in the page template, so a listener
+        // on the list never sees its clicks.
+        this.addEventListener('click', event => {
             if (event.target.matches('[data-add-participant]')) {
                 list.appendChild(this.createParticipantRow({ role: 'parent' }))
             } else if (event.target.matches('[data-remove-participant]')) {
