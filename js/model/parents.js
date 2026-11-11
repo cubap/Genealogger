@@ -56,7 +56,7 @@ export const ROLE_TOKENS = {
 }
 
 /** Display label per parent role; the audit rows are labelled by role. */
-export const ROLE_LABELS = {
+const ROLE_LABELS = {
     [NV.mother]: 'Mother',
     [NV.father]: 'Father',
     [NV.parent]: 'Parent'
@@ -477,4 +477,4 @@ export async function saveParents(options = {}) {
     return { personId, eventId: event['@id'], recordId, participants, derived }
 }
 
-export default { loadParents, saveParents, birthEventsOfChild, ROLE_TOKENS, ROLE_LABELS }
+export default { loadParents, saveParents, birthEventsOfChild, ROLE_TOKENS }

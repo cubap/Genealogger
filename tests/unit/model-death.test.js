@@ -300,3 +300,30 @@ describe('loadDeath legacy (DEER v1) reading', () => {
         expect(death).toBeNull()
     })
 })
+
+describe('loadDeath participant labels', () => {
+    test('names people whose identity has no bare `label` and falls back to the id when nothing is displayable', async () => {
+        const store = createMemoryStore()
+        // A DEER v1 person often carries only givenName/familyName. The shared
+        // label rule (#31) reads those; `entity.label` alone rendered the raw id.
+        const mother = 'https://example.org/mother'
+        await store.create({ '@id': mother, '@type': 'Person', givenName: 'Ada', familyName: 'Gordon' })
+        const blank = 'https://example.org/blank'
+        await store.create({ '@id': blank, '@type': 'Person' })
+
+        const saved = await saveDeath({
+            store,
+            name: { given: 'Died', family: 'Probe' },
+            evidence: { title: 'Death certificate' },
+            participants: [
+                { role: 'mother', agentId: mother },
+                { role: 'witness', agentId: blank }
+            ]
+        })
+
+        const death = await loadDeath({ store, personId: saved.personId })
+        expect(death.personLabels[mother]).toBe('Ada Gordon')
+        // A form row must stay selectable, so the id replaces `[ unlabeled ]`.
+        expect(death.personLabels[blank]).toBe(blank)
+    })
+})

@@ -27,7 +27,7 @@ import { createEntity, createPerson, readEntity } from './entities.js'
 import { createEvent, participate, participations, assertOutcome, eventProvenance, deriveParentAssertions } from './events.js'
 import { list as listAssertions } from './assertions.js'
 import { getPerson } from './person.js'
-import { eventsForPerson } from './search.js'
+import { eventsForPerson, deriveLabel, UNLABELED } from './search.js'
 import { getDefaultStore } from './default-store.js'
 
 /** Human labels for the properties the birth page surfaces (read view). */
@@ -103,7 +103,11 @@ async function resolveLabels(store, ids) {
     for (const id of new Set(ids.filter(Boolean))) {
         if (labels[id]) continue
         const entity = await readEntity({ store, id })
-        labels[id] = (entity && entity.label) || id
+        // One label rule for the whole app (#31). The id is kept as the fallback
+        // where a list would show `[ unlabeled ]`: these strings label form rows
+        // and evidence pickers, where an id is at least selectable.
+        const label = entity ? deriveLabel(entity) : UNLABELED
+        labels[id] = label === UNLABELED ? id : label
     }
     return labels
 }
