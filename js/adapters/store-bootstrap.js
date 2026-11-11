@@ -8,15 +8,17 @@
  * the result.
  *
  * Selection order (first match wins):
- *   1. ?store=rerum|devstore      -> RerumStore (network; devstore today)
+ *   1. ?store=local               -> LocalStore (localStorage; no network)
  *   2. ?store=memory              -> in-memory (no persistence; smoke checks)
  *   3. ?store=fixture             -> sample-family FixtureStore (dynamic import)
- *   4. default (browser)          -> LocalStore (localStorage; survives reload)
+ *   4. default (browser)          -> RerumStore (devstore; production is a config switch)
  *
- * The default is deliberately local, not remote: the birth slice must be
- * demoable and E2E-testable with no network and without writing throwaway
- * records to the shared sandbox. Flipping the default to devstore is a one-line
- * config change here (or ?store=rerum), never a caller change.
+ * The default is the real remote store because that is what the legacy birth page
+ * did (it posted straight to tinydev.rerum.io) and what user story 15 of #12 asks
+ * for: a saved record is usable data, not a per-browser sketch. ?store=local exists
+ * so E2E and demos can prove the create -> reload -> read cycle deterministically,
+ * without writing throwaway records into the shared sandbox. Flipping devstore ->
+ * production is a config change in `model/config.js` bases, never a caller change.
  */
 
 import { createMemoryStore } from './memory-store.js'
@@ -63,7 +65,7 @@ export async function resolveStore(options = {}) {
         ?? (typeof globalThis.location !== 'undefined' ? globalThis.location.search : '')
     const param = new URLSearchParams(search).get('store')
     const browser = typeof globalThis.localStorage !== 'undefined'
-    const kind = param || options.fallback || (browser ? 'local' : 'memory')
+    const kind = param || options.fallback || (browser ? 'rerum' : 'memory')
     const store = await createStore(kind, options.storeOptions)
     setDefaultStore(store)
     return store

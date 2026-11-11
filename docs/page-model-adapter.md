@@ -33,8 +33,9 @@ birth.html            static HTML: form fields keep their deer-key names
 ## Wiring a new page in M3 — checklist
 
 1. **Pick the store once.** In the page module call `await resolveStore()`. It
-   reads `?store=` (falls back to `local` in the browser) and installs the result
-   as the model default, so model calls take no per-call `store` argument.
+   reads `?store=` (falling back to `rerum`/devstore in the browser) and installs
+   the result as the model default, so model calls need no per-call `store`
+   argument.
    Production/devstore is a config switch in `store-bootstrap.js`, never a page
    edit.
 2. **Keep the HTML surface.** Reuse the familiar `deer-key` attribute names on

@@ -4,10 +4,11 @@ const { test, expect } = require('@playwright/test')
 /**
  * E2E for the M2 birth vertical slice on the new gl-* stack.
  *
- * The page runs against the LocalStore (browser default, see store-bootstrap) so
- * it persists across a reload with no network and no writes to the shared
- * devstore sandbox. This is the birth journey migrated off the legacy DEER v1
- * page; the old page is gone, so this is the only birth E2E.
+ * The page runs against the LocalStore (`?store=local`, see store-bootstrap) so it
+ * persists across a reload with no network and no writes to the shared devstore
+ * sandbox; the browser default is the real RerumStore/devstore. This is the birth
+ * journey migrated off the legacy DEER v1 page; the old page is gone, so this is
+ * the only birth E2E.
  */
 
 /** Fill and submit the birth form. */
@@ -27,7 +28,7 @@ async function submitBirth(page, fields) {
 
 test.describe('Birth vertical slice', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/birth.html')
+        await page.goto('/birth.html?store=local')
         await expect(page.locator('gl-birth-form')).toBeVisible()
     })
 

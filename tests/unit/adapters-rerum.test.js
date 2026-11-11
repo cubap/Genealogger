@@ -6,7 +6,7 @@
  * shapes; they assert the adapter's logic, not devstore's live API.
  */
 
-import { createRerumStore } from '../../js/adapters/rerum-store.js'
+import { createRerumStore, RerumStore } from '../../js/adapters/rerum-store.js'
 import { assertStore, STORE_METHODS } from '../../js/adapters/store.js'
 import { NV, SCHEMA } from '../../js/model/vocabulary.js'
 
@@ -133,5 +133,32 @@ describe('RerumStore lazy legacy migration', () => {
         const annos = await store.query({ target: id })
         const parent = annos.flatMap(a => Object.keys(a.body)).includes(NV.hasParent)
         expect(parent).toBe(true)
+    })
+})
+
+describe('store-bootstrap selection', () => {
+    // The browser default is a spec decision (user story 15 of #12): a saved
+    // birth record must be real devstore data, as the legacy page did.
+    test('browser default is the real RerumStore, not a local sketch', async () => {
+        const { resolveStore } = await import('../../js/adapters/store-bootstrap.js')
+        expect(await resolveStore({ search: '' })).toBeInstanceOf(RerumStore)
+    })
+
+    test('?store=local opts into localStorage for deterministic E2E', async () => {
+        const { resolveStore } = await import('../../js/adapters/store-bootstrap.js')
+        const { LocalStore } = await import('../../js/adapters/local-store.js')
+        expect(await resolveStore({ search: '?store=local' })).toBeInstanceOf(LocalStore)
+    })
+
+    test('the resolved store becomes the model layer default', async () => {
+        const { resolveStore } = await import('../../js/adapters/store-bootstrap.js')
+        const { getDefaultStore } = await import('../../js/model/default-store.js')
+        const store = await resolveStore({ search: '?store=memory' })
+        expect(getDefaultStore()).toBe(store)
+    })
+
+    test('unknown kinds fail loudly instead of silently picking a store', async () => {
+        const { createStore } = await import('../../js/adapters/store-bootstrap.js')
+        await expect(createStore('postgres')).rejects.toThrow(/unknown store kind/)
     })
 })
