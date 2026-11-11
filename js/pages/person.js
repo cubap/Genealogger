@@ -16,9 +16,9 @@
  */
 
 import { resolveStore } from '../adapters/store-bootstrap.js'
-import { loadPerson, assertPersonName, PROPERTY_LABELS, ASSERTION_ORDER, QUALIFIER_LABELS, NAME_PROPERTY_TOKENS } from '../model/person.js'
+import { loadPerson, assertPersonName, PROPERTY_LABELS, ASSERTION_ORDER } from '../model/person.js'
 import { listEntities } from '../model/entities.js'
-import { TYPES, NV } from '../model/vocabulary.js'
+import { TYPES, NV, QUALIFIER_LABELS, NAME_PROPERTY_TOKENS } from '../model/vocabulary.js'
 import { toAssertionRows, toAssertionGroups } from '../components/gl-assertion.js'
 import '../components/gl-evidence-picker.js'
 import '../components/gl-person-name-form.js'

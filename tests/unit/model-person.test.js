@@ -5,10 +5,10 @@
 import { createMemoryStore } from '../../js/adapters/memory-store.js'
 import { readDevstoreJson } from '../../js/adapters/legacy.js'
 import { createPerson, readEntity } from '../../js/model/entities.js'
-import { getPerson, loadPerson, assertPersonName, NV_NAME_TYPE, NV_ACTIVE_FROM, NV_ACTIVE_TO } from '../../js/model/person.js'
+import { getPerson, loadPerson, assertPersonName } from '../../js/model/person.js'
 import { assert as assertAnnotation } from '../../js/model/assertions.js'
 import { deriveLabel, UNLABELED } from '../../js/model/search.js'
-import { SCHEMA, NV } from '../../js/model/vocabulary.js'
+import { SCHEMA, NV, NV_NAME_TYPE, NV_ACTIVE_FROM, NV_ACTIVE_TO } from '../../js/model/vocabulary.js'
 import config from '../../js/model/config.js'
 
 // A DEER v1 Person: facts written directly on the entity document. Feeding the

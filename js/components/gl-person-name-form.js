@@ -23,6 +23,7 @@
  */
 
 import { parseConfidence } from './gl-assertion.js'
+import { NAME_TYPE_TOKENS } from '../model/vocabulary.js'
 import './gl-evidence-picker.js'
 
 /** deer-key inputs the form collects. */
@@ -36,6 +37,19 @@ export class GLPersonNameForm extends HTMLElement {
             event.preventDefault()
             this.dispatchEvent(new CustomEvent('gl-person-name-submit', { bubbles: true, detail: this.value }))
         })
+        // The controlled list of name types lives in the vocabulary module, not in
+        // the markup: one build-step-free source of truth for story 12 of #12. The
+        // `(unspecified)` placeholder is the author's, and `_wired` means a
+        // re-attached element is not filled twice.
+        const nameTypes = this.querySelector('select[deer-key="nameType"]')
+        if (nameTypes) {
+            for (const type of NAME_TYPE_TOKENS) {
+                const option = document.createElement('option')
+                option.value = type
+                option.textContent = type
+                nameTypes.appendChild(option)
+            }
+        }
     }
 
     get personId() {

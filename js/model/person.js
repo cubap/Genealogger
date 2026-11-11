@@ -18,7 +18,7 @@
  * disagreeing name claims keep their own type/range instead of being merged.
  */
 
-import { NV, SCHEMA, TYPES, DCTERMS, term } from './vocabulary.js'
+import { NV, SCHEMA, TYPES, DCTERMS, NV_NAME_TYPE, NV_ACTIVE_FROM, NV_ACTIVE_TO, NAME_PROPERTY_TOKENS } from './vocabulary.js'
 import { resolve as resolveAssertions, list as listAssertions, valueObject } from './assertions.js'
 import { createEntity, createPerson, readEntity } from './entities.js'
 import { eventProvenance } from './events.js'
@@ -56,39 +56,6 @@ export async function getPerson(options = {}) {
     const label = personLabel({ entity, assertions })
     return { entity, label, assertions, parents, children, lacunae }
 }
-
-/**
- * Name-type and active-range terms. The shared vocabulary has no tokens for
- * these yet, so this slice mints them from `nv:` with the public term() helper
- * (the death slice did the same for `witness`/`attendant`). Hoisting them into
- * vocabulary.NV is a later tidy-up; keeping them here stops the parallel M3
- * page slices from colliding on vocabulary.js.
- */
-export const NV_NAME_TYPE = term('nv', 'nameType')
-export const NV_ACTIVE_FROM = term('nv', 'activeFrom')
-export const NV_ACTIVE_TO = term('nv', 'activeTo')
-
-/** Display labels for the ValueObject qualifiers the person page understands. */
-export const QUALIFIER_LABELS = {
-    [NV_NAME_TYPE]: 'type',
-    [NV_ACTIVE_FROM]: 'from',
-    [NV_ACTIVE_TO]: 'to'
-}
-
-/** The name properties a person can be asserted to have, keyed by form token. */
-export const NAME_PROPERTY_TOKENS = {
-    full: SCHEMA.name,
-    given: SCHEMA.givenName,
-    family: SCHEMA.familyName,
-    additional: SCHEMA.additionalName,
-    alternate: SCHEMA.alternateName
-}
-
-/** Bare name-type values (issue #12 story 12: every name has a type). */
-export const NAME_TYPE_TOKENS = [
-    'birth name', 'married name', 'nickname', 'adopted name', 'religious name',
-    'professional name', 'alias', 'customary name', 'other name'
-]
 
 /** Human labels for the properties the person page surfaces (read view). */
 export const PROPERTY_LABELS = {
@@ -143,14 +110,23 @@ async function resolveEntities(store, ids) {
 }
 
 /**
- * Labels for Documents (Records, Events) that evidence an assertion: they have no
- * naming rule of their own beyond the bare cache, and the id is more useful on
- * screen than `[ unlabeled ]`.
+ * Label for a Document (a Record, or an Event standing in for one). Documents
+ * have no naming rule of their own beyond the bare label cache, so this is
+ * deriveLabel() -- the identity-only half of the one label rule -- falling back
+ * to the id, which is more useful on screen than `[ unlabeled ]`.
+ */
+function documentLabel(entity, id) {
+    const label = entity ? deriveLabel(entity) : UNLABELED
+    return label === UNLABELED ? id : label
+}
+
+/**
+ * Labels for Documents (Records, Events) that evidence an assertion.
  */
 function labelsOf(entities) {
     const labels = {}
     for (const [id, entity] of Object.entries(entities)) {
-        labels[id] = (entity && (entity.label || entity.name)) || id
+        labels[id] = documentLabel(entity, id)
     }
     return labels
 }
@@ -306,7 +282,7 @@ export async function loadPerson(options = {}) {
         const provenance = await eventProvenance({ store, event: id })
         if (!provenance.evidence) continue
         const record = await readEntity({ store, id: provenance.evidence })
-        evidenceLabels[id] = (record && (record.label || record.name)) || evidenceLabels[provenance.evidence] || provenance.evidence
+        evidenceLabels[id] = (record ? documentLabel(record, id) : '') || evidenceLabels[provenance.evidence] || provenance.evidence
     }
 
     return {
