@@ -64,72 +64,81 @@ Please be respectful and constructive in all interactions. We aim to foster an i
 
 ```
 Genealogger/
-├── css/              # Stylesheets
-├── js/               # JavaScript modules
-│   ├── components/   # Web components
-│   └── utils/        # Utility functions
-├── tests/            # Test files
-│   ├── unit/         # Unit tests
-│   └── e2e/          # E2E tests
-├── *.html            # HTML pages
-└── package.json      # Project configuration
+├── css/                  # Stylesheets
+├── js/
+│   ├── pages/            # One module per HTML page: reads the URL, calls the model, renders
+│   ├── components/       # gl-* custom elements (forms, views, pickers) — no network access
+│   ├── model/            # The eventities domain: entities, assertions, events, search, labels
+│   └── adapters/         # Store contract + implementations (rerum, local, memory, fixture) and the legacy reader
+├── docs/                 # page-model-adapter.md, devstore-query-contract.md, agents/
+├── tests/
+│   ├── unit/             # Vitest, model + component surface
+│   ├── e2e/              # Playwright journeys against ?store=local
+│   └── live/             # Optional scripts that run against real devstore
+├── *.html                # One page per file, each loading js/pages/<name>.js
+└── package.json
 ```
+
+**The layering rule is load-bearing:** `pages → model → adapters`. A component or page must never
+`fetch` or import an adapter directly; every read and write goes through `js/model/*`, which receives
+the store from `js/adapters/store-bootstrap.js`. That is what makes the whole app testable against the
+memory store and portable off devstore. See `docs/page-model-adapter.md`.
 
 ### Web Components
 
-When creating new web components:
+When creating a new web component:
 
-1. Create a file in `js/components/` named `deer-[component-name].js`
-2. Extend `HTMLElement`
-3. Use `observedAttributes()` for reactive attributes
-4. Implement `connectedCallback()` and `attributeChangedCallback()`
-5. Register with `customElements.define()`
-6. Import in `js/deer.js`
+1. Create a file in `js/components/` named `gl-[component-name].js`
+2. Extend `HTMLElement`, use light DOM (the pages are inspectable and styleable as-is)
+3. Pass data in through a property (`node.row = row`), not through re-parsed attributes
+4. Dispatch a `CustomEvent` for user intent; let the page decide what to save
+5. Register with `customElements.define('gl-…', …)` and import the module from the page script that uses it
 
 Example:
 ```javascript
-class DeerMyComponent extends HTMLElement {
-    static get observedAttributes() {
-        return ['deer-id', 'deer-type']
+class GlMyComponent extends HTMLElement {
+    set row(row) {
+        this._row = row
+        this.render()
     }
 
-    connectedCallback() {
-        // Initialization
-    }
-
-    attributeChangedCallback(name, oldValue, newValue) {
-        // React to attribute changes
+    render() {
+        this.textContent = this._row?.label ?? '[ unlabeled ]'
     }
 }
 
-customElements.define('deer-my-component', DeerMyComponent)
+customElements.define('gl-my-component', GlMyComponent)
 ```
+
+`deer-key` is the one retained DEER v1 attribute name: forms read it to know which property a field
+edits (`deer-key="givenName"`). Do not reintroduce any other `deer-*` attribute or element — the v1
+runtime was deleted at the end of M3, and the E2E suite asserts that `customElements.get('deer-…')`
+is undefined.
 
 ### Testing
 
-- **Unit Tests**: Test utility functions and pure logic
-- **E2E Tests**: Test user journeys and component interactions
-- **Coverage**: Aim for >70% coverage on utility functions
+- **Unit tests** (`tests/unit/`) cover the model and the component surface. Test the shape a store
+  returns, not the store: every model function takes `{ store, … }`, so pass a fake or
+  `MemoryStore`. Importing real fixtures is preferred over hand-built docs when one exists.
+- **E2E tests** (`tests/e2e/`) are user journeys that seed through the real forms on `?store=local`.
+  They must assert zero non-localhost requests, and each worktree gets its own port (derived from the
+  checkout path, `GL_PORT` to override) — never assume `:8080` is yours.
+- **Live smoke** (`tests/live/browser-devstore.mjs`) is opt-in and writes probe records to the shared
+  devstore. Do not add it to CI; run it manually before touching `js/adapters/`.
 
-Run tests:
+Run them:
 ```bash
-npm test              # Unit tests
-npm run test:e2e      # E2E tests
+npx vitest run tests/unit
+npx playwright test --project=chromium --workers=1
+npm run lint
 ```
 
 ### Error Handling
 
-Use the `ErrorLogger` utility for consistent error logging:
-
-```javascript
-import logger from './js/utils/error-logger.js'
-
-try {
-    // Your code
-} catch (error) {
-    logger.log(error, { context: 'myFunction' }, 'high')
-}
-```
+Each page catches at its own boundary and renders the failure in place (a banner, an empty state)
+rather than throwing into the console — see `js/pages/tree.js`. Adapters throw plain `Error`s with the
+response text, so page-level messages stay useful. Guard reads with the model's own fall-backs
+(`[ unlabeled ]`, `legacySubjectEvents()`) instead of special-casing a document shape in a page.
 
 ## Pull Request Process
 
@@ -141,23 +150,20 @@ try {
 
 ## Commit Messages
 
-Follow [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation changes
-- `style:` Code style changes (formatting, etc.)
-- `refactor:` Code refactoring
-- `test:` Test changes
-- `chore:` Maintenance tasks
+Short imperative subject ("Cover the label page in the live devstore smoke"), body explaining the
+*why* — the finding or constraint that made the change necessary, and any numbers you verified. Pull
+request titles carry the issue reference when there is one.
 
 Example:
 ```
-feat: add ancestor timeline component
+Rebuild ancestor timeline on the gl-* stack
 
-- Create deer-ancestor-timeline.js
-- Add timeline visualization
-- Include demo mode for testing
+The v1 timeline read hasFather/hasMother arrays, so it could only show the
+majority claim. Deriving rows from birth events keeps every competing claim
+visible, with its own evidence.
+
+- 21 unit tests, 3 E2E journeys on ?store=local
+- Closes #14 partially
 ```
 
 ## Getting Help

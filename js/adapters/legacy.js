@@ -4,12 +4,13 @@
  * the new model shapes. TRIMMABLE: once nothing depends on old devstore data
  * (lazy migration, per M1 spec), delete this module.
  *
- * Legacy shapes mirrored from js/deer.js, js/deer-record.js, and
- * js/utils/data-utils.js of the v1 app:
+ * Legacy shapes mirrored from the DEER v1 app (js/deer.js, js/deer-record.js and
+ * js/utils/data-utils.js, all deleted at the end of M3 — read them out of git
+ * history if a shape documented below ever looks wrong):
  * - Entities live at `https://devstore.rerum.io/v1/<id>` (or `.../id/<id>`),
  *   are bare JSON-LD with `@type` ('Person', 'Event', ...), a `name`/`label`,
  *   and the person's FACTS WRITTEN DIRECTLY ON THE DOCUMENT (the "expanded"
- *   shape produced by deer-utils expand(): schema-style bare keys such as
+ *   shape produced by the v1 expand() helper: schema-style bare keys such as
  *   `givenName`, `birthDate`, `hasFather`, `additionalType`, `hasAgent`).
  *   Some documents also carry a `@graph` wrapper and `__rerum` metadata.
  * - Annotations are Web Annotations: `{ type: 'Annotation', target, body }`

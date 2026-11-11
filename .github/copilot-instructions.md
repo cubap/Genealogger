@@ -1,169 +1,82 @@
 # Genealogger
 
-Genealogger is a client-side JavaScript web application built with the DEER (Data Encoding and Exhibition for RERUM) framework for managing genealogical data. It's a static web application that connects to external RERUM services for data storage and uses ES6 modules with custom web components.
+Genealogger is a **build-less, client-side JavaScript reference implementation of the entity + annotation + evidence ("eventities") model for person records**. An entity document stays almost empty; every fact is a separate Web Annotation that names the source Record supporting it, so competing claims coexist instead of overwriting each other. It aims to express genealogical records more robustly than the family-block encoding used by commercial sites, and it replaces the DEER v1 runtime it was originally written against.
 
-Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
+Static ES6 modules and custom elements, served straight from the repo, talking to RERUM devstore.
 
-## Working Effectively
+Always reference these instructions first and fall back to search or shell commands only when you encounter information that does not match what is here.
 
-### Bootstrap and Run the Application
-- **CRITICAL**: No build process is required. This is a static web application served directly from files.
-- Start the development server:
-  - `cd /home/runner/work/Genealogger/Genealogger`
-  - `python3 -m http.server 8080` -- starts immediately (< 5 seconds). Server runs in background.
-- Access the application:
-  - Open browser to `http://localhost:8080`
-  - Application loads homepage with person list and "New Person" button
-  - Navigation works between pages: index.html, person.html, birth.html, death.html, etc.
+## Working effectively
 
-### External Dependencies (IMPORTANT)
-- **D3.js Library**: Loaded from `https://cdn.jsdelivr.net/npm/d3@7/+esm`
-- **RERUM APIs**: Data storage services at `tinydev.rerum.io` and `devstore.rerum.io`
-- **Network Access Required**: Application has limited functionality when external services are blocked
-- **Expected Behavior**: Console errors about blocked CDN resources are normal in restricted environments
+### Bootstrap
+- `npm ci` — installs the dev toolchain only (vitest, @playwright/test, eslint, jsdom). There are **no runtime dependencies**.
+- `npx playwright install --with-deps` — only if you will run E2E tests (~1 minute, downloads browsers).
+- `npm run serve` — `http-server` on port 8080 for manual browsing. Any static server works.
+- There is no build, no bundler and no transpile step. Never add one: browsers load `js/**` directly.
 
-### No Build Process
-- **DO NOT run `npm install`** - No dependencies in package.json need installation
-- **DO NOT run `npm run build`** - No build process exists or is needed
-- **DO NOT run `npm start`** - Use Python HTTP server instead
-- Files are served directly without compilation or bundling
+### Commands
+- `npm run lint` — ESLint over `js/**/*.js`. Currently **0 errors / 0 warnings**; keep it there. Under 10 seconds.
+- `npx vitest run tests/unit` — unit suite (24 files / 280 tests, ~20 seconds). `npm test` runs the same thing.
+- `npx playwright test --project=chromium --workers=1` — E2E journeys (~1 minute; use `--workers=1`, parallel workers are flaky on Windows). All three browsers: `npx playwright test --workers=1`.
+- `node tests/live/browser-devstore.mjs` — **opt-in** smoke against real devstore. It writes stamped probe records to shared storage. Do not add it to CI, and do not run it unless the change justifies touching shared data.
 
-### Testing
-- **Manual Testing**: Always test through browser after making changes
-- **No Automated Tests**: package.json only has placeholder test script
-- **Functional Validation**: Test forms, navigation, and data entry workflows
-- **NEVER CANCEL**: Allow full page load times (5-10 seconds) for external dependencies
+### Choosing a store
+Every page honours `?store=`:
+- `rerum` (default) — devstore, real network
+- `local` — `localStorage`, no network. **This is what E2E uses**; journeys assert zero non-localhost requests.
+- `fixture` — in-memory sample family. Note: the shipped fixture is an ES module with import attributes that some Node versions cannot parse; prefer driving the forms.
+- `memory` — in-memory, for tests and storybook-style demos
+
+`?person=<id>` (and legacy `#<id>`) deep-links a person on every page.
+
+## Architecture (the parts that must not be violated)
+
+- **Layering: `js/pages/*` → `js/model/*` → `js/adapters/*`.** Pages read the URL and render; model modules hold the domain; adapters implement the `Store` contract. Components and pages must never `fetch` or import an adapter directly — the store is injected by `js/adapters/store-bootstrap.js`. That seam is what makes the app testable off-network and portable off devstore.
+- **Facts are annotations.** `js/model/assertions.js` writes `{ type: "Annotation", target: <entity>, body: { <propertyURI>: { value, evidence, "nv#confidence" } } }`. Reads group by body property; multiple assertions about one property are surfaced, never merged.
+- **Relationships are events.** A parent link is a participation annotation on a birth Event: `body.nv#participant` + `body.nv#role`, with `rel: [agentId, eventId]` as a **reverse index for queries only** (devstore cannot filter dotted body properties). Never read `rel` as authority.
+- **Entities carry at most a `label` cache.** `label` is a denormalization of the best evidenced name; `deriveLabel(entity)` (lists, bare documents) and `personLabel({ entity, assertions })` (detail) are the **one** label rule, owned by `js/model/search.js`. If those two ever disagree, `label.html` shows `#cacheNote`. Do not write a fourth labelling helper.
+- **`deer-key` is the surviving v1 attribute name**, meaning "which property this field edits". Everything else DEER v1 (`js/deer*.js`, the `deer-*` elements, `js/utils/`) was deleted at the end of M3. E2E asserts `customElements.get("deer-…")` is undefined; keep that green.
+- **DEER v1 data is still readable.** `js/adapters/legacy.js` converts v1 documents lazily. When you fix a v1 read gap, do it in the adapter or with a bounded fallback (see `legacySubjectEvents()` in `js/model/death.js`) — not by teaching pages about v1 shapes.
+- Vocabulary lives in `js/model/vocabulary.js` (canonical terms and `CANONICAL_ROLES`). Hoist a term there rather than re-minting a namespace in a page module.
+
+`docs/page-model-adapter.md` describes the page/model/adapter contract and `docs/devstore-query-contract.md` records the store's query behaviour. Read them before changing shared seams.
+
+## Repository structure
+
+```
+index.html person.html label.html birth.html parents.html death.html tree.html timeline.html
+css/site.css
+js/pages/        one module per page
+js/components/   gl-* custom elements (forms, views, pickers) — no network access
+js/model/        config, vocabulary, entities, assertions, events, search, label, person,
+                 birth, parents, death, tree, timeline, lacunae, default-store
+js/adapters/     store.js contract, rerum-store, local-store, memory-store, fixture-store,
+                 store-bootstrap, legacy (v1 reader), fixtures/
+docs/            page-model-adapter.md, devstore-query-contract.md, agents/
+tests/unit       Vitest
+tests/e2e        Playwright journeys on ?store=local
+tests/live       opt-in devstore smoke
+```
+
+## Known constraints
+
+- devstore `POST /query` returns **at most 10 documents with no paging**; `listByType` counts are floors, not totals. Production-scale queries are a known gap, not a bug to paper over locally.
+- `RerumStore.update()` (PUT) returns a **new version under a fresh `@id`**, which can orphan annotations pointing at the old id. Avoid in-place rewrites of documents other annotations target.
+- The Playwright port is derived from the checkout path (override with `GL_PORT`) because multiple worktrees share a machine. Never assume `:8080` belongs to your tree; if E2E failures look like "my page is stale", check which server answered.
+- Back-to-back live smoke runs can make devstore slow enough that later legs time out and report `Loading…`. Re-run before debugging the pages.
 
 ## Validation
 
-### Core User Scenarios
-Always manually validate these scenarios after making changes:
-1. **Homepage Load**: Navigate to `http://localhost:8080` and verify person list area and "New Person" button display
-2. **Navigation**: Click "New Person" button and verify navigation to person.html page
-3. **Form Functionality**: Navigate to birth.html and test form fields (Given Name, Family Name, etc.)
-4. **Data Entry**: Fill out birth form fields and verify input accepts text
-5. **Page Linking**: Test "home" links on all pages return to index.html
+After any change:
+1. `npm run lint` and `npx vitest run tests/unit` must pass.
+2. If you touched a page, form, component, or the adapter layer: `npx playwright test --project=chromium --workers=1`.
+3. Manual check: `npm run serve`, then open `http://localhost:8080/?store=local` and exercise the flow — add a birth record, open the person hub, follow Label / Parents / Death / Tree / Timeline, and confirm claims show their evidence and that two disagreeing sources both stay visible.
+4. Do not write to devstore to "prove" UI behaviour; `?store=local` is the sandbox.
 
-### Expected Application Behavior
-- **Homepage**: Shows "loading..." message and "New Person" button
-- **Person Page**: May show minimal content due to external API dependencies
-- **Birth Form**: Fully functional with all form fields working
-- **Form Fields**: Text inputs, date picker, gender dropdown all functional
-- **Network Dependencies**: Some features require external RERUM APIs
+Environment notes: static files need only a static server; blocked external requests are visible in the console and degrade `?store=rerum` only. Screenshots of UI changes are welcome.
 
-### Browser Testing Requirements
-- Always test in browser after code changes
-- Take screenshots of UI changes to verify visual functionality
-- Test form field interactions manually
-- Verify navigation between all HTML pages works
+## Contribution style
 
-## Common Tasks
-
-### Starting Development Server
-```bash
-cd /home/runner/work/Genealogger/Genealogger
-python3 -m http.server 8080
-# Server starts immediately, runs in background
-# Access at http://localhost:8080
-```
-
-### Repository Structure
-```
-/home/runner/work/Genealogger/Genealogger/
-├── index.html          # Homepage with person list
-├── person.html         # Person detail/creation page
-├── birth.html          # Birth event form (fully functional)
-├── death.html          # Death event form
-├── parents.html        # Parent relationship form
-├── label.html          # Label/tagging page
-├── timeline.html       # Timeline view
-├── tree.html           # Family tree view
-├── css/
-│   └── site.css        # Main stylesheet
-├── js/
-│   ├── deer.js         # Main DEER framework entry point
-│   ├── deer-config.js  # Configuration (API URLs, settings)
-│   ├── deer-render.js  # Rendering engine (uses D3.js)
-│   ├── deer-record.js  # Data recording/saving
-│   ├── deer-utils.js   # Utility functions
-│   ├── components/     # 15+ custom web components
-│   └── utils/          # Data, DOM, and string utilities
-└── package.json        # Minimal package info (no dependencies)
-```
-
-### Key Components (15 custom web components)
-- `deer-entity`: Person entity display
-- `deer-list`: Person list display
-- `deer-person`: Person detail component
-- `deer-event`: Event display component
-- `deer-typeahead-filter`: Search/filter component
-- `deer-nickname-editor`: Name editing component
-- `deer-tree`: Family tree visualization
-- `deer-svg-tree`: SVG-based tree display
-- `deer-timeline`: Event timeline component
-- And 6 more in js/components/
-
-### File Information Reference
-```bash
-# Repository root contents
-ls -la /home/runner/work/Genealogger/Genealogger/
-# Shows: HTML pages, css/, js/, package.json, .git*, no build files
-
-# JavaScript components
-ls -la /home/runner/work/Genealogger/Genealogger/js/components/
-# Shows: 15 deer-*.js custom web component files
-
-# Utility modules  
-ls -la /home/runner/work/Genealogger/Genealogger/js/utils/
-# Shows: data-utils.js, dom-utils.js, string-utils.js
-```
-
-### package.json content
-```json
-{
-    "name": "genealogger",
-    "version": "1.0.0",
-    "description": "A quick demonstration of the way Eventities can be used in family relationships to emulate genealogical software",
-    "license": "Proprietary",
-    "keywords": ["util", "functional", "server", "client", "browser"],
-    "author": "cubap",
-    "dependencies": {},
-    "scripts": {
-        "test": "echo 'No tests specified yet'"
-    }
-}
-```
-
-## Technical Architecture
-
-### DEER Framework
-- **Custom Web Components**: Uses deer-* prefixed custom elements
-- **External APIs**: Connects to RERUM (tinydev.rerum.io, devstore.rerum.io) for data storage
-- **ES6 Modules**: Uses modern JavaScript module imports
-- **No Framework Dependencies**: Pure JavaScript with custom component system
-
-### Development Notes
-- **Static Serving**: All files served directly without compilation
-- **Module System**: ES6 imports work directly in modern browsers
-- **External Dependencies**: D3.js for visualizations, RERUM APIs for data
-- **No Backend**: Client-side only application
-- **Cross-Platform**: Works with any static web server (Python, Node.js, Apache, nginx)
-
-### Debugging
-- **Console Errors Expected**: CDN and API blocking errors are normal in restricted environments
-- **Network Tab**: Check browser network tab for failed external requests
-- **Form Testing**: Birth form is most reliable for testing functionality
-- **Local Files**: All local JavaScript and CSS files load successfully
-
-### Making Changes
-- **Edit Files Directly**: No build step required
-- **Refresh Browser**: Changes visible immediately after browser refresh
-- **Test Locally**: Always use Python HTTP server for development
-- **Form Fields**: birth.html provides best testing interface for changes
-
-## Important Limitations
-- **External API Dependency**: Full functionality requires internet access to RERUM services
-- **CDN Dependencies**: D3.js visualizations require CDN access
-- **No Offline Mode**: Limited functionality when external services unavailable
-- **Development Environment**: Best tested with unrestricted internet access
-- **Expected Errors**: Console errors for blocked external resources are normal
+- Small PRs against `main`, one slice each, tests in the same PR. Aim for a few hundred lines, not a thousand.
+- Short imperative commit subjects; the body explains the *why* and records verified numbers.
+- New behaviour gets a unit test at the model seam, and an E2E journey when it is user-visible.
