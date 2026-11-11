@@ -24,37 +24,29 @@ Genealogger is a browser-based tool for creating and navigating genealogical dat
 
 ## Core Concepts
 
-### Entities
+Four ideas carry the whole app. [docs/MODEL.md](docs/MODEL.md) is the normative
+write-up of each, with worked examples; this is the summary.
 
-Bare documents that identify a thing. Types in use:
+- **Entities are bare.** A `Person` document holds its `label` cache and nothing
+  factual. `Event`s are typed with a subtype (`["Event", "…/nv#Birth"]`);
+  `Record`s hold a citation label and are what facts cite.
+- **Facts are annotations.** A claim is a Web Annotation whose `target` is the
+  entity and whose `body` is one property, keyed by its URI, holding a
+  ValueObject: the value plus `evidence` (the Record that says so),
+  `nv#confidence` (on the claim, not the person) and optional `source` citation
+  fields. Two documents that disagree produce two ValueObjects, and the UI shows
+  both instead of picking a winner.
+- **Relationships are events.** A parent link is a participation annotation on a
+  birth Event — `nv#participant` = the parent, `nv#role` = `nv#mother` /
+  `nv#father` / `nv#child`. There is no `hasFather` / `children` array on the
+  person document (that is the DEER v1 shape, still read and lazily migrated).
+- **Absence is asserted.** `nv:Lacuna` annotations mark an expected-but-
+  unrecorded slot ("birth mother unknown", naming the census that omits her), so
+  the app can tell "nobody looked" from "nothing there".
 
-- **Person** — an individual. Carries a `label` cache of its display name and nothing else factual.
-- **Event** — a life event, typed with a subtype (`@type: ["Event", "…/nv#Birth"]`): birth, death, and so on.
-- **Record** — a source document (a certificate, a census return). It holds a citation label, not genealogical facts; facts cite it.
-
-### Assertions
-
-Facts are Web Annotations whose `target` is the entity and whose `body` is a single property keyed ValueObject:
-
-```json
-"body": { "https://schema.org/birthDate": {
-    "value": "1815-12-10",
-    "evidence": "https://devstore.rerum.io/v1/id/certificate",
-    "https://cubap.github.io/Genealogger/nv#confidence": 0.95 } }
-```
-
-- `evidence` — the Record id that says so
-- `nv#confidence` — a number on the claim, not on the person
-- `source.citationSource` — a human-readable citation string
-- Multiple assertions about the same property are **not** merged; the UI groups them and counts the disagreement
-
-### Lacunae
-
-`nv:Lacuna` annotations mark an expected-but-unrecorded slot ("birth mother unknown"), so the app can tell "absent because unrecorded" from "absent because nobody looked".
-
-### Relationships are events, not arrays
-
-A parent link is a participation annotation on a birth Event: `nv#participant` = the parent, `nv#role` = `nv#mother`/`nv#father`/`nv#child`. There is no `hasFather`/`children` array on the person document (the DEER v1 shape, which the app still reads and lazily migrates).
+A fifth idea is about the code: every read of a person, tree or timeline is
+**assembled** from annotations at request time, so the same data drives a list, a
+hub, a tree and a timeline without a second copy that could drift.
 
 ### HTML surface vocabulary
 
@@ -75,6 +67,10 @@ The `deer-key` attribute name survives the DEER v1 rewrite as the recognised nam
 Forms and views never touch the network; pages call `js/model/*`, which calls the injected store adapter.
 
 ## Workflows
+
+Each journey below is summarised for a first-time user;
+**[docs/WORKFLOWS.md](docs/WORKFLOWS.md)** shows the same journeys as the model
+calls behind them, and `tests/e2e/*-journey.spec.js` runs them for real.
 
 ### Recording a birth (the usual way a person comes into existence)
 
@@ -101,81 +97,41 @@ Forms and views never touch the network; pages call `js/model/*`, which calls th
 
 `death.html?person=<id>` stores the death Event with date and place claims and typed participants (informant, witness), including which parent was still living — the shape that family-block encodings cannot express.
 
-## Data Patterns
+## Data patterns
 
-### Entity structure
+The stored JSON shapes — entity, annotation, participation, Lacuna — and two
+worked examples of ambiguity (competing fathers; a well-evidenced birthday
+against a doubtful draft-card age) live in
+**[docs/MODEL.md](docs/MODEL.md)**. Its §14 is the "what does this buy over a
+family block" comparison, written against real documents.
 
-```json
-{
-  "@id": "https://devstore.rerum.io/v1/id/...",
-  "@type": "Person",
-  "label": "Ada Gordon"
-}
-```
+The one pattern worth repeating here because it surprises people: `rel` on a
+participation annotation is a **reverse index**, not the record. Devstore cannot
+filter dotted body properties, so `rel` carries `[agent, event]` to make "which
+events is this person in?" one query. Reads never treat it as authoritative —
+the body remains the fact, and a record without `rel` (any DEER v1 document)
+falls back to a bounded scan.
 
-`label` is the only denormalized property, and it is a **cache** of the best evidenced name: lists read it because it costs one document, detail pages derive it from the assertions. When the two disagree, `label.html` says so.
+## Eventities alignment
 
-### Annotation pattern
-
-```json
-{
-  "type": "Annotation",
-  "target": "https://devstore.rerum.io/v1/id/ada",
-  "body": {
-    "https://schema.org/birthDate": {
-      "value": "1815-12-10",
-      "source": { "citationSource": "Parish baptism certificate, 1815" },
-      "evidence": "https://devstore.rerum.io/v1/id/certificate",
-      "https://cubap.github.io/Genealogger/nv#confidence": 0.95
-    }
-  }
-}
-```
-
-### Participation pattern
-
-```json
-{
-  "type": "Annotation",
-  "target": "https://devstore.rerum.io/v1/id/ada-birth",
-  "rel": ["https://devstore.rerum.io/v1/id/george", "https://devstore.rerum.io/v1/id/ada-birth"],
-  "body": {
-    "https://cubap.github.io/Genealogger/nv#participant": { "value": "https://devstore.rerum.io/v1/id/george" },
-    "https://cubap.github.io/Genealogger/nv#role": { "value": "https://cubap.github.io/Genealogger/nv#father" }
-  }
-}
-```
-
-`rel` is a reverse index for "which events is this person in?" — devstore cannot filter dotted body properties. Reads never treat it as authoritative; the body remains the record.
-
-## Eventities Alignment
-
-Genealogger's data patterns align with the [Eventities model](https://github.com/cubap/unews) used in related projects (Rerum-Collection-Management, unews).
-
-| Pattern | Genealogger | Eventities |
-|---------|-------------|------------|
-| Entity type | `@type: Person`; `["Event", "nv#Birth"]` | `slu:Person`, `slu:CampusOrganization` |
-| Annotation | Web Annotation, body keyed by the property URI | `oa:motivation` (property-assertion, relationship-assertion) |
-| Evidence | `body.<prop>.evidence` → a Record id | `slu:evidence` |
-| Confidence | `body.<prop>.nv#confidence` | `slu:confidence` |
-| Attribution | optional `creator` / `dcterms` on the annotation | `dcterms:creator`, `dcterms:created` |
-| Relationships | typed participation on an Event (`nv#participant` + `nv#role`) | relationship assertions between entities |
-| Known gaps | `nv:Lacuna` annotations | `Lacuna` |
-
-### Still to adopt
-
-1. **Lifecycle States** — Eventities transitions entities `encountered` → `anchored` → `described` → `related` → `reconciled` → `absorbed` → `invalidated`. Genealogger has no lifecycle field yet; it would sit on the Person alongside `label`.
-2. **Birth Annotations** — the `slu:birthAnnotation` pattern records the annotation that first created an entity. Genealogger infers provenance from event participation instead.
-3. **Sibling Eventities** — `slu:siblingEventities` tracks the same concept across collections. Genealogger has no collection scoping against production RERUM yet.
+Genealogger's patterns align with the [Eventities model](https://github.com/cubap/unews)
+used in related projects (Rerum-Collection-Management, unews). The full
+term-by-term correspondence table, and the three Eventities concepts not yet
+adopted (lifecycle states, birth annotations, sibling eventities), are in
+[docs/MODEL.md §13](docs/MODEL.md).
 
 ## Testing
 
 ```bash
-npx vitest run tests/unit       # 24 files, model + component surface
+npx vitest run tests/unit       # 25 files / 290 tests, model + component surface
 npx playwright test --project=chromium --workers=1
 node tests/live/browser-devstore.mjs   # every page against real devstore
 npm run lint
 ```
+
+E2E runs on `?store=local`, so it never writes to the shared devstore, and the
+tree suite asserts zero non-localhost requests. Use `--workers=1`: parallel
+browsers flake on Windows. Each checkout gets its own dev-server port.
 
 ## Deployment
 
@@ -188,7 +144,7 @@ Genealogger is deployed via GitHub Actions to GitHub Pages:
 
 - **A page shows `[ unlabeled ]`**: nothing names that entity — no cached `label` and no evidenced name claim. `label.html?person=<id>` fixes it.
 - **A fact is missing that you expect**: it is an annotation. Check that its `target` is the entity (for facts) or the Event (for relationships), and open the person's provenance view.
-- **An old record renders but edits look odd**: DEER v1 documents are read through the legacy adapter and converted lazily; the page says so in its banner. Save once to migrate.
+- **An old record renders but edits look odd**: DEER v1 documents are read through the legacy adapter and converted lazily; the page says so in its banner, and its inherited rows are read-only. Recording the fact again writes it in the new shape beside the old one — the v1 document is never rewritten, so both rows show until the old data is retired for good.
 - **`?store=local` shows nothing**: it is a separate sandbox from devstore and holds only what you saved in that browser.
 - **Lists look incomplete against devstore**: `POST /query` returns at most 10 documents with no paging (`docs/devstore-query-contract.md`). Counts are floors, not totals.
 
