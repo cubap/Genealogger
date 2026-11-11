@@ -91,3 +91,24 @@ birth.html            static HTML: form fields keep their deer-key names
   confidence); `readonly` suppresses the control for the migrated view.
 - `gl-evidence-picker` — shadow DOM; names the source Record separately from the
   facts; the page feeds existing records via `.records`.
+
+## Naming a person (one rule, `search.js#personLabel`)
+
+Every surface that has to display a person's name calls
+`personLabel({ entity, assertions })`. It prefers the denormalized bare `label`,
+then an asserted `schema.org/name`, then name parts (asserted, then bare
+identity properties, then unmapped DEER v1 keys), then `UNLABELED`.
+
+- A **list** row has no annotations and cannot afford to fetch them, so it calls
+  `deriveLabel(entity)` — literally `personLabel({ entity })`.
+- A **detail** page already resolved assertions and passes them in, so a person
+  recorded only as name parts still gets a name.
+- Both paths run the same preference order, so the index and the person page
+  cannot call the same record two different things.
+- Writing a name **must** refresh the bare `label` too. A list cannot see a newer
+  assertion; leaving the cache stale is a bug in the write path, not something
+  the read can repair.
+- A label is display-only and carries no evidence. The underlying name facts stay
+  separate assertions (owned by the label page), each rendered with its own
+  provenance and confidence — `personLabel` picks one for display and never
+  merges conflicts.
