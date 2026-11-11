@@ -1,8 +1,30 @@
 <!DOCTYPE html>
 <!--
-To change this license header, choose License Headers in Project Properties.
-To change this template file, choose Tools | Templates
-and open the template in the editor.
+    Parents page — M3 vertical slice (issue #14 user story 7).
+    Runs on the new stack: gl-* custom elements + js/model + an injected store
+    adapter (js/adapters). No DEER v1 (js/deer.js), no build step, no framework —
+    this mirrors birth.html / death.html.
+
+    Parentage is EVENT-DERIVED. The deer-key attribute names below are RETAINED as
+    the recognised HTML surface vocabulary (gl-parents-form reads them), but
+    submitting this form never writes hasFather/hasMother onto the Person: it
+    dispatches gl-parents-submit and js/model/parents.saveParents() records an
+    nv:mother / nv:father PARTICIPATION on a birth-family Event, then derives
+    nv:hasParent on the child. nv:hasChild is never stored at all.
+
+    Removed from the v1 page, deliberately:
+      - the "Add a new father/mother" buttons and their inline newPerson() fetch
+        straight to https://tinydev.rerum.io/create. Typing a name and saving now
+        creates the Person THROUGH THE MODEL, evidenced by the record you name.
+      - the hidden <deer-collection deer-collection="Genealogger-085522"> used as
+        the person source; model/search.listPersons() fills the dropdowns instead.
+      - the ?father / ?mother / ?parent query params and the devstore query that
+        guessed a role from a person's gender. ?person=<id> (the contract every
+        other page already uses) names the CHILD, and the role is recorded
+        explicitly rather than inferred from a sex value.
+      - the `personBanner` / `parentDetail` elements the old inline script wrote to
+        but which were never in this document — the v1 page could not show anything
+        about the person named in its own URL.
 -->
 <html lang="en">
     <head>
@@ -10,130 +32,71 @@ and open the template in the editor.
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
-        <script src="js/deer.js" type="module"></script>
+        <script type="module" src="js/pages/parents.js"></script>
     </head>
     <body>
         <a href="./">home</a>
+
+        <div id="personBanner" class="material-banner hidden"></div>
+
         <div class="material-card">
             <h2>Parents</h2>
-            <div class="action-buttons">
-                <button type="button" class="material-btn" onclick="newPerson('dadID')">Add a new father</button>
-                <button type="button" class="material-btn" onclick="newPerson('momID')">Add a new mother</button>
-            </div>
-            <select class="personDropdown material-btn" title="Select a person"></select>
-            <label>Father: <input id="dadID" type="text" deer-key="hasFather"></label>
-            <select class="personDropdown material-btn" title="Select a person"></select>
-            <label>Mother: <input id="momID" type="text" deer-key="hasMother"></label>
-            <label>Residence: <input id="homeID" type="text" deer-key="homeLocation"></label>
-            <input type="submit" value="set person details">
-        </div>
-    <deer-collection deer-collection="Genealogger-085522" id="allFolks" class="hidden">loading...</deer-collection>
-    <script type="module">
-        import { getValue } from './js/utils/data-utils.js';
-        function newPerson(elem) {
-            let label = prompt("Enter a name:")
-            let person = {
-                "@type": "Person",
-                name: label
-            }
-            fetch("https://tinydev.rerum.io/create", {
-                method: 'POST',
-                mode: 'cors',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(person)
-            }).then(response=>response.json()).then(newPerson => {
-                // rerum_server #126
-//                let id = response.headers.get('Location')
-let id = newPerson.new_obj_state['@id']
-                window[elem].value = id
-                let collection = {
-                    "@type": "Annotation",
-                    target: id,
-                    body: {
-                        targetCollection: "Genealogger-085522"
-                    }
-                }
-                fetch("https://tinydev.rerum.io/create", {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(collection)
-                })
-            })
-        }
-        function updatePersonInput(event) {
-            let elem = event.target
-            let inputElem = elem.nextElementSibling.children[0]
-            inputElem.value = elem.value
-            inputElem.$isDirty = true
-        }
-        function populatePersonInputs() {
-            let inputElems = Array.from(document.querySelectorAll(".personDropdown"))
-            let liElems = Array.from(allFolks.getElementsByTagName("li"))
-            inputElems.map(elem => {
-                let dropdown = `<option>Select Person</option>\n`
-                for (const li of liElems) {
-                    dropdown += `<option value="${li.getAttribute("deer-id")}"> ${li.textContent} </option>\n`
-                }
-                elem.innerHTML = dropdown
-                elem.oninput = updatePersonInput
-            })
-        }
-        document.addEventListener("DOMContentLoaded", function () {
-            let params = new URLSearchParams(window.location.search)
-            let personID = window.location.hash.substr(1)
-            dadID.value = params.get("father")
-            momID.value = params.get("mother")
-            let parentID = params.get("parent")
-            if (parentID) {
-                let query = {
-                    "__rerum.history.next": {"$exists": true, "$size": 0},
-                    "body.gender": {"$exists": true},
-                    target: parentID
-                }
-                fetch("https://tinydev.rerum.io/query", {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(query)
-                }).then(response => response.json())
-                        .catch(() => ([]))
-                        .then(genders => {
-                            if (genders.length === 0) {
-                                dadID.value = parentID
-                            } else {
-                                // Just take the first assertion for now
-                                let gender = getValue(genders[0].body.gender)
-                                if ((/female/i).test(gender)) {
-                                    momID.value = parentID
-                                } else if ((/male/i).test(gender)) {
-                                    dadID.value = parentID
-                                }
-                            }
-                        })
-            }
-            if (personID) {
-                personBanner.setAttribute("deer-id", personID)
-                parentDetail.setAttribute("deer-id", personID)
-            }
-        });
-        document.addEventListener("deer-view-rendered", event => {
-            if (event.target.id === "allFolks") {
-                populatePersonInputs()
-            }
-        })
-        window.onhashchange = () => {
-            let personID = window.location.hash.substr(1)
-            parentDetail.setAttribute("deer-id", personID)
-            personBanner.setAttribute("deer-id", personID)
 
-        }
-    </script>
-</body>
+            <div id="personPicker">
+                <p class="hint">Whose parents are you recording? Pick the child.</p>
+                <gl-typeahead-filter id="childFilter" placeholder="Filter people by name..."></gl-typeahead-filter>
+                <p id="pickerStatus" class="hint" role="status"></p>
+                <div id="childList"></div>
+            </div>
+        </div>
+
+        <div class="material-card">
+            <h3>Record parentage</h3>
+            <p class="hint">Each claim is stored as a role on a birth event, with its own evidence and confidence. A second source that disagrees gets its own event, so conflicting parents stay visible side by side.</p>
+            <gl-parents-form id="parentsForm">
+                <form id="parentsDetail" novalidate>
+                    <fieldset>
+                        <legend>Parents</legend>
+                        <p class="hint">Pick an existing person from the dropdown, or type a name to record a new one.</p>
+                        <div data-participant data-parent-role="father" class="participant-row">
+                            <label>Father: <input type="text" deer-key="hasFather" data-participant-name placeholder="Father name" tabindex="1"></label>
+                            <select class="personDropdown" title="Select a person as father" tabindex="1"></select>
+                            <label>confidence <select data-confidence tabindex="1"></select></label>
+                        </div>
+                        <div data-participant data-parent-role="mother" class="participant-row">
+                            <label>Mother: <input type="text" deer-key="hasMother" data-participant-name placeholder="Mother name" tabindex="1"></label>
+                            <select class="personDropdown" title="Select a person as mother" tabindex="1"></select>
+                            <label>confidence <select data-confidence tabindex="1"></select></label>
+                        </div>
+                        <div data-participants></div>
+                        <button type="button" data-add-parent class="material-btn">+ Add another parent</button>
+                        <p class="hint">For a step-relationship or a contested claim, add the other person here instead of overwriting the first.</p>
+                    </fieldset>
+
+                    <gl-evidence-picker deerlabel="Evidence document"></gl-evidence-picker>
+
+                    <label>Residence: <input id="homeID" type="text" deer-key="homeLocation" placeholder="Where the family lived, per this source" tabindex="1"></label>
+
+                    <input type="submit" value="Record parents">
+                </form>
+            </gl-parents-form>
+            <p id="saveStatus" class="hint" role="status"></p>
+            <a class="person-detail" id="birthLink" href="birth.html?person=">Add birth</a>
+            <a class="person-detail" id="personLink" href="person.html#">Open this person</a>
+        </div>
+
+        <div class="material-card">
+            <h3>Parents on record</h3>
+            <p class="hint">Derived from birth events: each row says which role, which document and how confident the source was.</p>
+            <div id="existingParents"></div>
+            <div id="existingEvents"></div>
+        </div>
+
+        <div class="material-card">
+            <h3>Children of this person</h3>
+            <p class="hint">Derived from the same events; the child-side view above is the primary one. Nothing is stored in this direction.</p>
+            <div id="existingChildren"></div>
+            <div id="existingResidence"></div>
+        </div>
+    </body>
 </html>
