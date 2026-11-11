@@ -1,43 +1,43 @@
 <!DOCTYPE html>
 <!--
-To change this license header, choose License Headers in Project Properties.
-To change this template file, choose Tools | Templates
-and open the template in the editor.
+    Tree page — M3 vertical slice (issue #14 story 10).
+    Runs on the new stack: gl-tree-view + js/pages/tree.js + js/model/tree.js +
+    an injected store adapter (js/adapters). No DEER v1 (js/deer.js), no build
+    step, no framework, no visualization library — the SVG is hand-rolled for
+    parity; polish is explicitly out of scope for this milestone.
+
+    Edges are DERIVED reads only: nv:hasParent assertions upward (parentsOf)
+    and their computed inverse downward (childrenOf). The page never relies on
+    a stored nv:hasChild. Contested parentage renders as competing edges plus
+    a dashed outline, because the disagreement is the point.
+
+    Deep links: tree.html?person=<id> (the convention the other migrated pages
+    use) and the legacy tree.html#<id> emitted by person.html. Optional
+    ?generations=N widens the bounded walk; ?store=local|fixture|rerum picks
+    the adapter (see docs/devstore-query-contract.md).
 -->
-<html>
+<html lang="en">
+    <head>
+        <title>Genealogger - Tree</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
+        <script type="module" src="js/pages/tree.js"></script>
+    </head>
+    <body>
+        <a href="./">home</a>
 
-<head>
-    <title>Genealogger - Tree</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
-    <script src="js/deer.js" type="module"></script>
-</head>
+        <div id="personBanner" class="material-banner hidden"></div>
 
-<body>
-    <a href="./">home</a>
-    <h3><deer-label id="personBanner" deer-key="name">Label</deer-label></h3>
-    <deer-children-list id="childrenList"></deer-children-list>
-
-    <deer-svg-tree id="svgTree"></deer-svg-tree>
-
-    <deer-tree id="treeDetail">Loading tree</deer-tree>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            let params = new URLSearchParams(location.search)
-            window.onhashchange()
-        })
-    </script>
-    <script>
-        window.onhashchange = () => {
-            let personID = window.location.hash.substr(1)
-            treeDetail.setAttribute("deer-id", personID)
-            svgTree.setAttribute("deer-id", personID)
-            personBanner.setAttribute("deer-id", personID)
-            childrenList.setAttribute("deer-id", personID)
-        }
-    </script>
-</body>
-
+        <div class="material-card">
+            <h2>Family tree</h2>
+            <p class="hint">
+                Click a person to re-root the tree here; the &#8599; link opens their page.
+                Each edge names the role and the source Record where the model has one.
+                Dashed lines and a &#9888; mark contested parentage: every competing claim
+                keeps its own edge instead of one being silently chosen.
+            </p>
+            <gl-tree-view id="treeView"></gl-tree-view>
+        </div>
+    </body>
 </html>
