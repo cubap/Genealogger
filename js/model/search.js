@@ -212,7 +212,8 @@ const NAME_PART_PROPERTIES = [SCHEMA.givenName, SCHEMA.additionalName, SCHEMA.fa
  *   1. `label` -- what createPerson stores, and what the legacy reader copies
  *      from v1 `name`. A stored summary wins because it is what a previous
  *      write decided to call this person.
- *   2. `name`, bare on the entity or asserted under the schema.org URI
+ *   2. `name` on the entity -- bare (DEER v1) or expanded to the schema.org URI,
+ *      since a JSON-LD store may hand back either -- or asserted under schema.org
  *   3. name parts (given, additional, family) -- asserted first, then bare
  *      identity properties, then the unmapped v1 bare keys
  *   4. UNLABELED, so absence is visible instead of blank
@@ -238,7 +239,7 @@ export function personLabel(options = {}) {
     const { entity, assertions } = options
     if (!entity || typeof entity !== 'object') return UNLABELED
     const direct = rawText(entity.label) || firstText(assertions?.label)
-        || rawText(entity.name) || firstText(assertions?.[SCHEMA.name])
+        || rawText(entity.name) || rawText(entity[SCHEMA.name]) || firstText(assertions?.[SCHEMA.name])
     if (direct) return direct
     const parts = NAME_PART_PROPERTIES
         .map(property => firstText(assertions?.[property]) || rawText(entity[property]))

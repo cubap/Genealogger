@@ -5,8 +5,7 @@
  */
 
 import { parseConfidence, formatConfidence, toAssertionRows, toAssertionGroups, CONFIDENCE_LEVELS } from '../../js/components/gl-assertion.js'
-import { NV, SCHEMA, term } from '../../js/model/vocabulary.js'
-import { NV_NAME_TYPE, NV_ACTIVE_FROM, NV_ACTIVE_TO, QUALIFIER_LABELS } from '../../js/model/person.js'
+import { NV, SCHEMA, term, NV_NAME_TYPE, NV_ACTIVE_FROM, NV_ACTIVE_TO, QUALIFIER_LABELS } from '../../js/model/vocabulary.js'
 
 describe('parseConfidence', () => {
     test('numbers pass through and clamp to 0-1', () => {

@@ -52,17 +52,11 @@
                         </select>
                     </label>
                     <label>Used as
+                        <!-- gl-person-name-form appends the controlled name types from
+                             model/vocabulary.js (NAME_TYPE_TOKENS); the list is kept in one
+                             place rather than repeated in markup. -->
                         <select deer-key="nameType" tabindex="1" title="What this name was used as">
                             <option value="">(unspecified)</option>
-                            <option value="birth name">birth name</option>
-                            <option value="married name">married name</option>
-                            <option value="nickname">nickname</option>
-                            <option value="adopted name">adopted name</option>
-                            <option value="religious name">religious name</option>
-                            <option value="professional name">professional name</option>
-                            <option value="alias">alias</option>
-                            <option value="customary name">customary name</option>
-                            <option value="other name">other name</option>
                         </select>
                     </label>
                     <label>Active from: <input type="date" deer-key="activeFrom" tabindex="1"></label>

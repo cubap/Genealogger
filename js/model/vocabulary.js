@@ -121,6 +121,39 @@ export const SCHEMA = {
     homeLocation: term('schema', 'homeLocation')
 }
 
+/**
+ * Name qualifiers. Issue #12 story 12 requires that every name has a type and may
+ * be bounded in time, and the qualifiers ride INSIDE the ValueObject so two
+ * disagreeing name claims keep their own type/range instead of being merged.
+ * (Minted page-locally by the person slice while the M3 page slices ran in
+ * parallel; hoisted now that the naming rule has a second writer.)
+ */
+export const NV_NAME_TYPE = term('nv', 'nameType')
+export const NV_ACTIVE_FROM = term('nv', 'activeFrom')
+export const NV_ACTIVE_TO = term('nv', 'activeTo')
+
+/** Display labels for the ValueObject qualifiers a name assertion can carry. */
+export const QUALIFIER_LABELS = {
+    [NV_NAME_TYPE]: 'type',
+    [NV_ACTIVE_FROM]: 'from',
+    [NV_ACTIVE_TO]: 'to'
+}
+
+/** The name properties a person can be asserted to have, keyed by form token. */
+export const NAME_PROPERTY_TOKENS = {
+    full: SCHEMA.name,
+    given: SCHEMA.givenName,
+    family: SCHEMA.familyName,
+    additional: SCHEMA.additionalName,
+    alternate: SCHEMA.alternateName
+}
+
+/** Bare name-type values (issue #12 story 12: every name has a type). */
+export const NAME_TYPE_TOKENS = [
+    'birth name', 'married name', 'nickname', 'adopted name', 'religious name',
+    'professional name', 'alias', 'customary name', 'other name'
+]
+
 /** dcterms terms used for provenance on ValueObjects and annotations. */
 export const DCTERMS = {
     source: term('dcterms', 'source'),
