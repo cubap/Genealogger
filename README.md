@@ -109,7 +109,7 @@ Genealogger/
 │       ├── memory-store.js   #   tests
 │       ├── fixture-store.js  #   demo family
 │       └── legacy.js         #   read-only DEER v1 shape conversion
-├── docs/                     # page-model-adapter.md, devstore-query-contract.md, adr/
+├── docs/                     # MODEL.md, API.md, WORKFLOWS.md, adr/, page-model-adapter.md
 ├── schemas/
 │   └── genealogger-context.jsonld  # normative JSON-LD context for nv: + reuse
 ├── nv/index.html             # the nv: namespace URL, rendered from the context
@@ -124,6 +124,19 @@ Genealogger/
 ```
 
 Layers point one way: `pages → model → adapters`. A page never fetches or writes documents itself, and the model layer performs no DOM work.
+
+## Documentation
+
+| Document | What it answers |
+|---|---|
+| [USER_GUIDE.md](USER_GUIDE.md) | using the app: pages, forms, stores, troubleshooting |
+| [GLOSSARY.md](GLOSSARY.md) | the words this repo agrees to use, and the ones it avoids |
+| [docs/MODEL.md](docs/MODEL.md) | **why the data is shaped this way** — entities, annotations, evidence, conflicts, lacunae, worked examples |
+| [docs/API.md](docs/API.md) | every exported function in `js/model/` and `js/adapters/` |
+| [docs/WORKFLOWS.md](docs/WORKFLOWS.md) | each user journey as the model calls behind it |
+| [docs/page-model-adapter.md](docs/page-model-adapter.md) | the page → model → adapter wiring contract |
+| [docs/devstore-query-contract.md](docs/devstore-query-contract.md) | what the RERUM query endpoint can and cannot answer |
+| [nv/](nv/index.html) | the `nv:` namespace, rendered from the normative JSON-LD context |
 
 ## API Documentation
 
