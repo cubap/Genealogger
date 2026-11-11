@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html lang="en">
+    <head>
+        <title>Genealogger - Birth</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
+        <script src="js/deer.js" type="module"></script>
+    </head>
+    <body>
+        <a href="./">home</a>
+        <div id="personBanner" class="material-banner hidden"></div>
+        <div class="material-card">
+            <h2>Add Birth</h2>
+            <form deer-type="Event" deer-context="http://schema.org" id="birthDetail" deer-motivation="describing" deer-creator="cubap">
+                <input type="hidden" deer-key="hasAgent" id="personDetail">
+                <input type="hidden" deer-key="additionalType" value="Birth">
+                <label>Given Name: <input title="First name" type="text" deer-key="givenName" tabindex="1"></label>
+                <label>Family Name (née): <input title="Last name" type="text" deer-key="familyName" tabindex="1"></label>
+                <label>Middle Name(s): <input title="Middle name" type="text" deer-key="additionalName" tabindex="1"></label>
+                <label>Alternate Name(s): <input type="text" deer-key="alternateName" tabindex="1"></label>
+                <label>Place of Birth: <input type="text" deer-key="birthPlace" tabindex="1"></label>
+                <label>Date of Birth: <input type="date" deer-key="birthDate" tabindex="1"></label>
+                <label>Gender: 
+                    <select type="text" deer-key="gender" tabindex="1" title="Select gender">
+                        <option value="unspecified/other">unspecified/other</option>
+                        <option value="Male">male</option>
+                        <option value="Female">female</option>
+                    </select>
+                </label>
+                <input type="submit" value="record event outcomes">
+            </form>
+            <form deer-type="Person" deer-context="http://schema.org" id="parentDetail" deer-motivation="describing" deer-creator="cubap">
+                <select class="personDropdown" title="Select a person"></select>
+                <label>Father: <input id="dadID" type="text" deer-key="hasFather"></label>
+                <select class="personDropdown" title="Select a person"></select>
+                <label>Mother: <input id="momID" type="text" deer-key="hasMother"></label>
+                <label>Residence: <input id="homeID" type="text" deer-key="homeLocation"></label>
+                <input type="submit" value="set person details">
+            </form>
+        </div>
+    <deer-list deer-collection="Genealogger-085522" id="allFolks" class="hidden">loading...</deer-list>
+        <script type="module">
+            import { getValue } from './js/utils/data-utils.js';
+            function updatePersonInput(event){
+                let elem = event.target
+                let inputElem = elem.nextElementSibling.children[0]
+                inputElem.value = elem.value
+                inputElem.$isDirty = true
+            }
+            function populatePersonInputs(){
+                let inputElems = Array.from(document.querySelectorAll(".personDropdown"))
+                let liElems = Array.from(allFolks.getElementsByTagName("li"))
+                inputElems.map(elem=>{
+                    let dropdown = `<option>Select Person</option>\n`
+                    for (const li of liElems) {
+                        dropdown+= `<option value="${li.getAttribute("deer-id")}"> ${li.textContent} </option>\n`
+                    }
+                    elem.innerHTML = dropdown
+                    elem.oninput = updatePersonInput
+                })
+            }
+            document.addEventListener("DOMContentLoaded", async function () {
+                let params = new URLSearchParams(window.location.search)
+                let personID = params.get("person")
+                let birthID = window.location.hash.substr(1)
+                dadID.value = params.get("father")
+                momID.value = params.get("mother")
+                let parentID = params.get("parent")
+                if (parentID) {
+                    let query = {
+                        "__rerum.history.next": {"$exists": true, "$size": 0},
+                        "body.gender": {"$exists": true},
+                        target: parentID
+                    }
+                    fetch("https://tinydev.rerum.io/query", {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(query)
+                    }).then(response => response.json())
+                            .catch(() => ([]))
+                            .then(genders => {
+                                if (genders.length === 0) {
+                                    dadID.value = parentID
+                                } else {
+                                    // Just take the first assertion for now
+                                    let gender = getValue(genders[0].body.gender)
+                                    if ((/female/i).test(gender)) {
+                                        momID.value = parentID
+                                    } else if ((/male/i).test(gender)) {
+                                        dadID.value = parentID
+                                    }
+                                }
+                            })
+                        }
+                        if (personID) {
+                            personDetail.value = personID
+                            personBanner.setAttribute("deer-id", personID)
+                            parentDetail.setAttribute("deer-id", personID)
+                            // Fallback: If no birth event, try to populate birth form from person entity
+                            try {
+                                const personObj = await fetch(personID).then(r => r.json())
+                                if (personObj.birthPlace) {
+                                    birthDetail.querySelector('[deer-key="birthPlace"]').value = personObj.birthPlace
+                                }
+                                if (personObj.birthDate) {
+                                    birthDetail.querySelector('[deer-key="birthDate"]').value = personObj.birthDate
+                                }
+                                if (personObj.gender) {
+                                    birthDetail.querySelector('[deer-key="gender"]').value = personObj.gender
+                                }
+                                if (personObj.givenName) {
+                                    birthDetail.querySelector('[deer-key="givenName"]').value = personObj.givenName
+                                }
+                                if (personObj.familyName) {
+                                    birthDetail.querySelector('[deer-key="familyName"]').value = personObj.familyName
+                                }
+                                if (personObj.additionalName) {
+                                    birthDetail.querySelector('[deer-key="additionalName"]').value = personObj.additionalName
+                                }
+                                if (personObj.alternateName) {
+                                    birthDetail.querySelector('[deer-key="alternateName"]').value = personObj.alternateName
+                                }
+                            } catch (err) { /* ignore if not found */ }
+                        }
+                        if (birthID) {
+                            birthDetail.setAttribute("deer-id", birthID)
+                        } else if (personID) {
+                    let query = {
+                        "__rerum.history.next": {"$exists": true, "$size": 0},
+                        "body.hasAgent.value": personID
+                    }
+                    fetch("https://tinydev.rerum.io/query", {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(query)
+                    }).then(response => response.json())
+                            .catch(() => (null))
+                            .then(pointers => {
+                                let list = []
+                                pointers.map(tc => list.push(fetch("https://tinydev.rerum.io/query", {
+                                        method: 'POST',
+                                        mode: 'cors',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            "__rerum.history.next": {"$exists": true, "$size": 0},
+                                            "body.additionalType.value": "Birth",
+                                            target: tc.target
+                                        })
+                                    }).then(response => response.json().catch(err => {
+                                            __deleted: console.log(err)
+                                        }))))
+                                return Promise.all(list).then(l => l.filter(i => !i.hasOwnProperty("__deleted")))
+                            }).then(events => {
+                                const target = events?.[0]?.[0]?.target
+                                if (target) {
+                                    window.location.hash = target
+                                } else {
+                                    console.warn("No birth event found for this person.")
+                                }
+                            })
+                }
+            });
+            document.addEventListener("deer-form-rendered", event => {
+                let drawnType = event.detail["@type"]
+                if (drawnType === "Source") {
+                    parentDetail.setAttribute("nv-evidence", event.detail["@id"])
+                    birthDetail.setAttribute("nv-evidence", event.detail["@id"])
+                }
+            })
+            document.addEventListener("deer-view-rendered", event => {
+                if (event.target.id === "allFolks") {
+                    setTimeout(populatePersonInputs, 0)
+                }
+            })
+            // Evidence detail handling removed - can be added back when evidence UI is implemented
+            window.onhashchange = () => {
+                let birthID = window.location.hash.substr(1)
+                birthDetail.setAttribute("deer-id", birthID)
+                if(birthID.length<1) alert("No hash for person to be born!")
+            }
+        </script>
+    </body>
+</html>

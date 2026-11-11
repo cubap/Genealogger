@@ -1,0 +1,31 @@
+{
+  "name": "genealogger",
+  "version": "1.0.0",
+  "description": "A genealogy application using DEER framework for managing family relationships",
+  "license": "MIT",
+  "keywords": [
+    "genealogy",
+    "family-tree",
+    "deer",
+    "rerum",
+    "web-components"
+  ],
+  "author": "cubap",
+  "contributors": [],
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "eslint": "^8.56.0",
+    "jsdom": "^29.1.1",
+    "vitest": "^4.1.10"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "lint": "eslint js/**/*.js",
+    "serve": "npx http-server -p 8080"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cubap/Genealogger"
+  }
+}
