@@ -30,7 +30,7 @@
  *   are preserved raw.
  */
 
-import { NV, SCHEMA, TYPES, EVENT_SUBTYPES } from '../model/vocabulary.js'
+import { NV, SCHEMA, TYPES, DCTERMS, EVENT_SUBTYPES } from '../model/vocabulary.js'
 
 /** Bare v1 property name -> model property URI. */
 const LEGACY_KEY_MAP = {
@@ -54,6 +54,22 @@ const LEGACY_KEY_MAP = {
 }
 
 const IDENTITY_KEYS = ['@id', '@type', '@context', '__rerum', '@graph']
+
+/**
+ * The new shape mirrors an Event's subtype into top-level dcterms:type so DEER
+ * v1 tooling can still read it (adapters/rerum-store.js writes both slots).
+ * That mirror is type metadata, not an asserted fact: a document whose only
+ * non-plumbing key is its own subtype mirror is already new-shape, and must not
+ * fan out into a `#legacy-*` pseudo-assertion on read.
+ * @param {Object} doc raw store document
+ * @param {string} key property name being considered
+ * @returns {boolean} true when `key` is the dcterms:type mirror of an @type entry
+ */
+export function isSubtypeMirror(doc, key) {
+    if (key !== DCTERMS.type) return false
+    const value = rawValue(doc[DCTERMS.type])
+    return typeof value === 'string' && [].concat(doc['@type'] || []).includes(value)
+}
 
 /** Legacy facts may arrive as `value`, `{ value }`, or arrays thereof. */
 function rawValue(entry) {
@@ -156,6 +172,15 @@ export function convertLegacyEntity(entity) {
                 if (!types.includes(uri)) types.push(uri)
                 bare['@type'] = types.length === 1 ? types[0] : types
             }
+            continue
+        }
+        if (isSubtypeMirror(primary, key)) {
+            // Same slot as `additionalType`, spelled with the URI the new shape
+            // writes: fold it into @type rather than asserting it as a fact.
+            const uri = rawValue(primary[key])
+            const types = Array.isArray(bare['@type']) ? bare['@type'] : [bare['@type']]
+            if (!types.includes(uri)) types.push(uri)
+            bare['@type'] = types.length === 1 ? types[0] : types
             continue
         }
         if (key === 'hasFather' || key === 'hasMother') {

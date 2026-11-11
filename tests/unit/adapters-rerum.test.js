@@ -11,6 +11,8 @@ import config from '../../js/model/config.js'
 import { assertStore, STORE_METHODS } from '../../js/adapters/store.js'
 import { NV, SCHEMA, EVENT_SUBTYPES } from '../../js/model/vocabulary.js'
 import { saveBirth, loadBirth } from '../../js/model/birth.js'
+import { createEvent } from '../../js/model/events.js'
+import { list } from '../../js/model/assertions.js'
 
 const BASE = 'https://fake.test/v1'
 
@@ -332,6 +334,43 @@ describe('RerumStore against a devstore-shaped service', () => {
         expect(participations.every(doc => doc.rel.includes(saved.eventId))).toBe(true)
         expect(participations.some(doc => doc.rel.includes(saved.personId))).toBe(true)
         expect(participations.some(doc => !doc.rel.includes(saved.personId))).toBe(true)
+    })
+})
+
+
+describe('RerumStore default fetch', () => {
+    it('reaches global fetch as a property access, never an aliased copy', async () => {
+        // Chromium brand-checks Window.fetch: `const f = fetch; f(url)` throws
+        // "Illegal invocation", so a store built with the default fetch was
+        // unusable in a browser while every injected-fake test stayed green.
+        const receivers = []
+        const original = globalThis.fetch
+        globalThis.fetch = function (...args) {
+            receivers.push(this)
+            return Promise.resolve({ ok: true, json: async () => ({ '@id': 'x' }) })
+        }
+        try {
+            const store = createRerumStore({})
+            await store.read('https://devstore.rerum.io/v1/id/x')
+        } finally {
+            globalThis.fetch = original
+        }
+        expect(receivers.length).toBeGreaterThan(0)
+        expect(receivers.every(receiver => receiver === globalThis)).toBe(true)
+    })
+})
+
+describe('new-shape documents survive a round trip', () => {
+    it('does not re-read the saved dcterms:type subtype mirror as a legacy assertion', async () => {
+        // devstore serves back the top-level properties it was given, so the
+        // structural legacy check tripped on the new shape's own subtype mirror:
+        // every event the app had just written read back as a DEER v1 record and
+        // the death page locked itself read-only. Caught against live devstore by
+        // tests/live/browser-devstore.mjs.
+        const { store } = storeWith()
+        const event = await createEvent({ store, subtype: 'Death', label: 'Death of Ada Byron' })
+        const annos = await list({ store, target: event['@id'] })
+        expect(annos.some(anno => String(anno['@id']).includes('#legacy-'))).toBe(false)
     })
 })
 

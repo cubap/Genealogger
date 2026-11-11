@@ -5,7 +5,7 @@
  */
 
 import { createMemoryStore } from '../../js/adapters/memory-store.js'
-import { readDevstoreJson, convertLegacyAnnotation, loadLegacy } from '../../js/adapters/legacy.js'
+import { readDevstoreJson, convertLegacyEntity, convertLegacyAnnotation, loadLegacy } from '../../js/adapters/legacy.js'
 import { assert as assertAnnotation } from '../../js/model/assertions.js'
 import { getPerson } from '../../js/model/person.js'
 import { SCHEMA, NV, EVENT_SUBTYPES, typeTokens } from '../../js/model/vocabulary.js'
@@ -166,5 +166,33 @@ describe('typeTokens', () => {
 
     test('ignores empty values', () => {
         expect(typeTokens(undefined, null, '')).toEqual([])
+    })
+})
+describe('convertLegacyEntity and the subtype mirror', () => {
+    const DEATH = EVENT_SUBTYPES.Death
+
+    it('folds a dcterms:type mirror into @type instead of asserting it', () => {
+        // model/events.js writes this mirror on purpose, so a record the app just
+        // saved must not fan out into a `#legacy-*` fact and mark itself legacy.
+        const [bare, ...annos] = convertLegacyEntity({
+            '@id': 'https://devstore.rerum.io/v1/id/evt',
+            '@type': ['Event', DEATH],
+            'http://purl.org/dc/terms/type': DEATH,
+            label: 'Death of Ada Byron'
+        })
+        expect(annos).toEqual([])
+        expect(bare['@type']).toEqual(['Event', DEATH])
+        expect(bare.label).toBe('Death of Ada Byron')
+    })
+
+    it('still fans real facts on a document into legacy assertions', () => {
+        const [bare, ...annos] = convertLegacyEntity({
+            '@id': 'https://devstore.rerum.io/v1/id/p',
+            '@type': 'Person',
+            givenName: 'Ada'
+        })
+        expect(annos.length).toBe(1)
+        expect(annos[0].body[SCHEMA.givenName].value).toBe('Ada')
+        expect(bare['@type']).toBe('Person')
     })
 })

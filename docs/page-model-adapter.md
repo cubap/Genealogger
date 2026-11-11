@@ -57,7 +57,11 @@ birth.html            static HTML: form fields keep their deer-key names
 7. **Lazy migration.** Legacy records read through `RerumStore` are converted to
    the new shape by the legacy reader on every read (`#legacy-` ids flag them).
    Render them read-only; the first save goes through `saveX`, which writes only
-   the new shape. No batch migration step.
+   the new shape. No batch migration step. Detection is structural — a document
+   is legacy when it carries facts directly on itself — so the `dcterms:type`
+   subtype mirror that `createEvent` writes alongside `@type` is exempt, along
+   with `label`/`rel`/`__rerum`. Anything else top-level on a new-shape document
+   will be misread as a v1 fact and lock its page read-only.
 8. **Never store `nv:hasChild`.** Compute it at read time with
    `search.childrenOf()`. Keep that invariant.
 9. **Reverse lookups need a `rel` index, not a body query.** devstore cannot
