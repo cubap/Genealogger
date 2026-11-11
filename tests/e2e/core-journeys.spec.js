@@ -7,12 +7,16 @@ const { test, expect } = require('@playwright/test')
 
 test.describe('Genealogger Core User Journeys', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    // ?store=local keeps the index off the shared devstore sandbox: the landing
+    // page is an empty list in a fresh context, which is what these smoke tests
+    // are about. The index journey itself is tests/e2e/index-journey.spec.js.
+    await page.goto('/index.html?store=local')
   })
 
   test('should load the main page and display person list', async ({ page }) => {
-    // Wait for the person list to load
-    await expect(page.locator('deer-list')).toBeVisible()
+    // The list chrome renders without waiting on a backend: filter + status line.
+    await expect(page.locator('gl-typeahead-filter')).toBeVisible()
+    await expect(page.locator('#indexStatus')).toBeVisible()
     
     // Check that the page title is correct
     await expect(page).toHaveTitle(/Genealogger/)
@@ -43,13 +47,14 @@ test.describe('Genealogger Core User Journeys', () => {
   })
 
   test('should filter person list with typeahead', async ({ page }) => {
-    // Wait for person list to load
-    await expect(page.locator('deer-list')).toBeVisible()
+    // The filter is a model query now, so the page reports what it matched
+    // instead of hiding <li> elements behind another component's back.
+    await expect(page.locator('gl-typeahead-filter')).toBeVisible()
     
     // Type in the filter input
     await page.fill('.typeahead-input', 'test')
     
     // Wait for filtering to occur
-    await page.waitForTimeout(1000)
+    await expect(page.locator('#indexStatus')).toContainText('No people match "test"')
   })
 })
