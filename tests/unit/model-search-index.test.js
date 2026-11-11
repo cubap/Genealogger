@@ -10,6 +10,7 @@
 
 import {
     deriveLabel,
+    personLabel,
     normalizeQuery,
     matchesQuery,
     listPersons,
@@ -92,6 +93,71 @@ describe('deriveLabel', () => {
     test('never resolves an annotation — extra keys are ignored', () => {
         const entity = person('ada', { label: 'Ada Gordon', body: { [SCHEMA.birthDate]: 'ignored' } })
         expect(deriveLabel(entity)).toBe('Ada Gordon')
+    })
+})
+
+describe('personLabel', () => {
+    test('names a person from assertions when the entity carries no identity', () => {
+        // The detail-page shape: identity lives in annotations, not on the doc.
+        expect(personLabel({
+            entity: person('blank'),
+            assertions: { [SCHEMA.givenName]: { value: 'Ada' }, [SCHEMA.familyName]: { value: 'Gordon' } }
+        })).toBe('Ada Gordon')
+    })
+
+    test('uses an asserted full name when there is no label or name', () => {
+        expect(personLabel({
+            entity: person('blank'),
+            assertions: { [SCHEMA.name]: { value: 'Ada Byron Gordon' } }
+        })).toBe('Ada Byron Gordon')
+    })
+
+    test('the denormalized bare label still outranks an assertion', () => {
+        // Lists cannot see annotations, so the bare label is the cache every
+        // surface agrees on; a write that asserts a new name must refresh it.
+        expect(personLabel({
+            entity: person('ada', { label: 'Ada Gordon' }),
+            assertions: { [SCHEMA.name]: { value: 'Ada Byron' } }
+        })).toBe('Ada Gordon')
+    })
+
+    test('shows one of several conflicting assertions instead of joining them', () => {
+        expect(personLabel({
+            entity: person('blank'),
+            assertions: {
+                [SCHEMA.givenName]: [{ value: 'Ada' }, { value: 'Alice' }],
+                [SCHEMA.familyName]: { value: 'Gordon' }
+            }
+        })).toBe('Ada Gordon')
+    })
+
+    test('an asserted name part beats a bare one on the entity', () => {
+        expect(personLabel({
+            entity: person('ada', { [SCHEMA.givenName]: 'Old', [SCHEMA.familyName]: 'Gordon' }),
+            assertions: { [SCHEMA.givenName]: { value: 'New' } }
+        })).toBe('New Gordon')
+    })
+
+    test('reads a legacy bare `label` annotation off a migrated person', () => {
+        expect(personLabel({
+            entity: person('blank'),
+            assertions: { label: { value: 'Ada G.' } }
+        })).toBe('Ada G.')
+    })
+
+    test('is UNLABELED when assertions exist but say nothing displayable', () => {
+        expect(personLabel({ entity: person('blank'), assertions: {} })).toBe(UNLABELED)
+        expect(personLabel({ entity: person('blank'), assertions: { [NV.Lacuna]: { value: '' } } }))
+            .toBe(UNLABELED)
+    })
+
+    test('deriveLabel is personLabel with no assertions, so no surface diverges', () => {
+        const entity = person('ada', {
+            [SCHEMA.givenName]: 'Ada',
+            [SCHEMA.additionalName]: 'Byron',
+            [SCHEMA.familyName]: 'Gordon'
+        })
+        expect(deriveLabel(entity)).toBe(personLabel({ entity }))
     })
 })
 
