@@ -1,8 +1,15 @@
 <!DOCTYPE html>
 <!--
-To change this license header, choose License Headers in Project Properties.
-To change this template file, choose Tools | Templates
-and open the template in the editor.
+    Death page — M3 vertical slice.
+    Runs on the new stack: gl-* custom elements + js/model + an injected store
+    adapter (js/adapters). No DEER v1 (js/deer.js), no build step, no framework —
+    this mirrors birth.html (the M2 reference slice) exactly.
+    The deer-key attribute names on the form fields are RETAINED as the
+    recognised HTML surface vocabulary; gl-death-form reads them.
+    Two legacy controls are gone because neither worked on this page: the
+    `grave.html` link (no such page exists in this repo) and the
+    `.personDropdown` select (only parents.html ever populated it). The
+    "Add Birth" cross-link stays and now carries the real person id.
 -->
 <html lang="en">
     <head>
@@ -10,49 +17,74 @@ and open the template in the editor.
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="css/site.css" name="genealogger-site-styles">
-        <script src="js/deer.js" type="module"></script>
+        <script type="module" src="js/pages/death.js"></script>
     </head>
     <body>
         <a href="./">home</a>
+
+        <div id="personBanner" class="material-banner hidden"></div>
+
         <div class="material-card">
             <h2>Add Death</h2>
-            <form deer-type="Death" id="deathDetail" deer-context="http://schema.org">
-                <input type="hidden" deer-key="hasAgent" id="personDetail">
-                <input type="hidden" deer-key="creator" value="cubap">
-                <p>Evidence</p>
-                <label>Place of Death: <input type="text" deer-key="deathPlace" tabindex="1"></label>
-                <label>Date of Death: <input id="deathDate" type="date" deer-key="deathDate" tabindex="1"></label>
-                <input type="submit" value="+">
-            </form>
-            <a class="person-detail" id="graveLink" href="grave.html">Grave</a>
-            <!--http://rdf.muninn-project.org/ontologies/graves.html#term_hasLocation-->
-            <a class="person-detail" href="birth.html?person=">Add Birth</a>
-            <select class="personDropdown material-btn" title="Select a person"></select>
+            <gl-death-form id="deathForm" deereventtype="Death">
+                <form id="deathDetail" novalidate>
+                    <fieldset>
+                        <legend>Deceased</legend>
+                        <label>Given Name: <input title="First name" type="text" deer-key="givenName" tabindex="1"></label>
+                        <label>Family Name (née): <input title="Last name" type="text" deer-key="familyName" tabindex="1"></label>
+                        <label>Middle Name(s): <input title="Middle name" type="text" deer-key="additionalName" tabindex="1"></label>
+                        <label>Alternate Name(s): <input type="text" deer-key="alternateName" tabindex="1"></label>
+                        <label>Place of Death: <input type="text" deer-key="deathPlace" tabindex="1"></label>
+                        <label>Confidence for place
+                            <select data-confidence-for="deathPlace" title="Confidence for the place assertion">
+                                <option value="">(inherit)</option>
+                                <option value="certain">Certain</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                                <option value="uncertain">Uncertain</option>
+                            </select>
+                        </label>
+                        <label>Date of Death: <input id="deathDate" type="date" deer-key="deathDate" tabindex="1"></label>
+                        <label>Confidence for date
+                            <select data-confidence-for="deathDate" title="Confidence for the date assertion">
+                                <option value="">(inherit)</option>
+                                <option value="certain">Certain</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                                <option value="uncertain">Uncertain</option>
+                            </select>
+                        </label>
+                        <label>Gender:
+                            <select deer-key="gender" tabindex="1" title="Select gender">
+                                <option value="unspecified/other">unspecified/other</option>
+                                <option value="Male">male</option>
+                                <option value="Female">female</option>
+                            </select>
+                        </label>
+                    </fieldset>
+
+                    <gl-evidence-picker deerlabel="Evidence document"></gl-evidence-picker>
+
+                    <fieldset>
+                        <legend>Participants (witness, attendant, informant, parent)</legend>
+                        <p class="hint">Recorded as participants with roles — not witness/attendant blanks on the record.</p>
+                        <div data-participants></div>
+                        <button type="button" data-add-participant>+ Add participant</button>
+                    </fieldset>
+
+                    <input type="submit" value="Record death">
+                </form>
+            </gl-death-form>
+            <a class="person-detail" id="birthLink" href="birth.html?person=">Add Birth</a>
         </div>
-        <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                let params = new URLSearchParams(location.search)
-                let personID = params.get("person")
-                if (!personID) {
-                    let message = "This interface requires a 'person' parameter which was missing. Redirecting to main page."
-                    alert(message)
-                    location.href = "./index.html"
-                }
-            personDetail.value = personID
-                personBanner.setAttribute("deer-id", personID)
-            })
-            deathDate.addEventListener("input", (e) => {
-                let query = new URLSearchParams()
-                query.set("deathDate", e.target.value)
-                query.set("isRemainsOf", personBanner.getAttribute("deer-id"))
-                graveLink.setAttribute("href","grave.html?"+query.toString())
-            })
-        </script>
-        <script>
-        window.onhashchange = () => {
-            let deathID = window.location.hash.substr(1)
-            deathDetail.setAttribute("deer-id", deathID)
-        }
-    </script>
+
+        <div class="material-card">
+            <h3>Assertions on record</h3>
+            <p class="hint">Each assertion shows its evidence document and confidence. Conflicting sources stay separate.</p>
+            <div id="existingDeath"></div>
+            <div id="existingParticipants"></div>
+        </div>
     </body>
 </html>
