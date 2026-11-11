@@ -2,7 +2,11 @@
 const { test, expect } = require('@playwright/test')
 
 /**
- * E2E tests for Genealogger core user journeys
+ * E2E smoke tests for the index page.
+ *
+ * The per-page journeys live in their own spec files (person-, tree-,
+ * timeline-, birth-, death-journey.spec.js) so that each M3 slice owns one file
+ * and never has to edit a shared spec.
  */
 
 test.describe('Genealogger Core User Journeys', () => {
@@ -20,30 +24,6 @@ test.describe('Genealogger Core User Journeys', () => {
     
     // Check that the page title is correct
     await expect(page).toHaveTitle(/Genealogger/)
-  })
-
-  test('should navigate to person creation page', async ({ page }) => {
-    // Click on "New Person" button
-    await page.click('.add-person-btn')
-    
-    // Wait for navigation
-    await expect(page).toHaveURL(/person\.html/)
-  })
-
-  test('should display family tree visualization', async ({ page }) => {
-    // Navigate to tree page
-    await page.goto('/tree.html')
-    
-    // Wait for tree component to load
-    await expect(page.locator('deer-tree')).toBeVisible()
-  })
-
-  test('should display ancestor timeline', async ({ page }) => {
-    // Navigate to timeline page
-    await page.goto('/timeline.html')
-    
-    // Wait for timeline component to load
-    await expect(page.locator('deer-ancestor-timeline')).toBeVisible()
   })
 
   test('should filter person list with typeahead', async ({ page }) => {
