@@ -35,23 +35,24 @@
  * shape (lazy migration).
  */
 
-import { NV, SCHEMA, TYPES, EVENT_SUBTYPES, typeTokens } from './vocabulary.js'
+import { NV, SCHEMA, TYPES, EVENT_SUBTYPES, CANONICAL_ROLES, typeTokens } from './vocabulary.js'
 import { createEntity, createPerson, readEntity } from './entities.js'
 import { createEvent, participate, participations, assertOutcome, eventProvenance } from './events.js'
 import { assert as assertAnnotation, list as listAssertions } from './assertions.js'
 import { getPerson } from './person.js'
-import { eventsForPerson, parentsOf, childrenOf, valuesOf } from './search.js'
+import { eventsForPerson, parentsOf, childrenOf, valuesOf, deriveLabel, UNLABELED } from './search.js'
 import { getDefaultStore } from './default-store.js'
 
 /**
- * Parent-position role tokens. The child's own role is included so a caller can
+ * Parent-position role tokens. Every one is a canonical vocabulary role -- this
+ * slice mints nothing -- and the child's own role is included so a caller can
  * never accidentally record the child as one of its parents.
  */
 export const ROLE_TOKENS = {
-    child: NV.child,
-    parent: NV.parent,
-    mother: NV.mother,
-    father: NV.father
+    child: CANONICAL_ROLES.child,
+    parent: CANONICAL_ROLES.parent,
+    mother: CANONICAL_ROLES.mother,
+    father: CANONICAL_ROLES.father
 }
 
 /** Display label per parent role; the audit rows are labelled by role. */
@@ -114,7 +115,13 @@ async function resolveLabels(store, ids) {
     for (const id of new Set(ids.filter(Boolean))) {
         if (labels[id]) continue
         const entity = await readEntity({ store, id })
-        labels[id] = (entity && entity.label) || id
+        // Rows name people the way every other surface does (the one label rule in
+        // docs/page-model-adapter.md): identity data only, no annotation read, so a
+        // v1 parent stored under `name` still gets a name instead of a URI. An
+        // unlabeled document falls back to its id, which is what a source Record
+        // without a title needs.
+        const named = entity ? deriveLabel(entity) : ''
+        labels[id] = named && named !== UNLABELED ? named : id
     }
     return labels
 }
