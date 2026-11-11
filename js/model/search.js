@@ -1,12 +1,19 @@
 /**
  * @module model/search
- * @description Minimal read helpers over the store: find people by what is
- * asserted about them, find events a person took part in, and compute the
- * derived parent/child edges. `nv:hasChild` exists ONLY here, computed at
- * read time from stored `nv:hasParent` assertions -- it is never written.
+ * @description Minimal read helpers over the store: list and filter People for
+ * an index/picker, find people by what is asserted about them, find events a
+ * person took part in, and compute the derived parent/child edges.
+ * `nv:hasChild` exists ONLY here, computed at read time from stored
+ * `nv:hasParent` assertions -- it is never written.
+ *
+ * `listPersons()` is the index read (issue #14 story 1): ONE `listByType` query
+ * plus a label DERIVED from each bare entity's identity data. It deliberately
+ * resolves no annotations, so a thousand people cost one read, not a thousand.
+ * The deeper "most relevant name" lookup belongs to `getPerson()` on the person
+ * page, where one person's assertions are worth resolving.
  */
 
-import { NV, TYPES } from './vocabulary.js'
+import { NV, SCHEMA, TYPES } from './vocabulary.js'
 import { list as listAssertions, valueObjectsFor } from './assertions.js'
 import { getDefaultStore } from './default-store.js'
 
@@ -114,6 +121,102 @@ export async function childrenOf(options = {}) {
         for (const vo of valueObjectsFor(anno, NV.hasParent)) {
             if (vo.value === personId) rows.push({ ...vo, target: anno.target })
         }
+    }
+    return rows
+}
+
+/** What a Person shows in a list when its identity carries nothing displayable. */
+export const UNLABELED = '[ unlabeled ]'
+
+/**
+ * Read one raw identity property out of a bare entity as display text. Tolerates
+ * every shape identity data arrives in: a plain string, a ValueObject-shaped
+ * `{ value }`, a `{ label }`/`{ name }` object, or an array of those. No
+ * annotation is consulted -- this reads what is ALREADY on the entity.
+ * @param {*} value
+ * @returns {string} text, or '' when there is nothing to show
+ */
+function rawText(value) {
+    if (value === null || value === undefined) return ''
+    if (Array.isArray(value)) return value.map(rawText).filter(Boolean).join(' ')
+    if (typeof value === 'object') return rawText(value.value ?? value.label ?? value.name ?? '')
+    if (typeof value === 'string' || typeof value === 'number') return String(value).trim()
+    return ''
+}
+
+/** Bare DEER v1 keys still present on migrated identity data. */
+const LEGACY_NAME_KEYS = ['givenName', 'additionalName', 'familyName']
+
+/**
+ * The cheap list label of a bare Person, DERIVED at read time from identity data
+ * only (issue #14 story 1, #12 story 13). Preference order:
+ *   1. `label` (what createPerson stores and the legacy reader copies from `name`)
+ *   2. `name`
+ *   3. name parts, schema.org URIs first then the bare v1 keys
+ *   4. UNLABELED
+ * @param {Object} entity a bare Person entity (any identity shape)
+ * @returns {string} display label; never throws on odd input
+ */
+export function deriveLabel(entity) {
+    if (!entity || typeof entity !== 'object') return UNLABELED
+    const direct = rawText(entity.label) || rawText(entity.name)
+    if (direct) return direct
+    const parts = [SCHEMA.givenName, SCHEMA.additionalName, SCHEMA.familyName]
+        .map(property => rawText(entity[property]))
+        .filter(Boolean)
+    if (!parts.length) {
+        for (const key of LEGACY_NAME_KEYS) {
+            const text = rawText(entity[key])
+            if (text) parts.push(text)
+        }
+    }
+    return parts.join(' ').trim() || UNLABELED
+}
+
+/**
+ * Split free text into the lowercase tokens a search must satisfy.
+ * @param {string|null|undefined} query raw user input
+ * @returns {Array<string>} tokens; empty when there is no query
+ */
+export function normalizeQuery(query) {
+    return String(query ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)
+}
+
+/**
+ * Does a label satisfy a query? Every token must appear (case-insensitive
+ * substring); an empty query matches everything. Pure, so the matching rule the
+ * index and any picker share is testable without a store or a DOM.
+ * @param {string} label display text to test
+ * @param {string|Array<string>} query raw text or pre-normalized tokens
+ * @returns {boolean}
+ */
+export function matchesQuery(label, query) {
+    const tokens = Array.isArray(query) ? query : normalizeQuery(query)
+    if (!tokens.length) return true
+    const text = String(label ?? '').toLowerCase()
+    return tokens.every(token => text.includes(token))
+}
+
+/**
+ * The index/picker read: every bare Person as a list row, filtered and sorted,
+ * from ONE `listByType` read. Labels come from `deriveLabel()`, so no
+ * annotation is resolved for any row.
+ * @param {Object} [options]
+ * @param {Object} [options.store]
+ * @param {string} [options.query] filter text; every token must be in the label
+ * @param {boolean} [options.sort=true] sort rows by label (A-Z)
+ * @returns {Promise<Array<{id: string, label: string, entity: Object}>>} rows
+ *   ready for `gl-person-chip`
+ */
+export async function listPersons(options = {}) {
+    const { store = getDefaultStore(), query = '', sort = true } = options
+    const entities = await store.listByType(TYPES.Person)
+    const tokens = normalizeQuery(query)
+    const rows = entities
+        .map(entity => ({ id: entity['@id'], label: deriveLabel(entity), entity }))
+        .filter(row => matchesQuery(row.label, tokens))
+    if (sort) {
+        rows.sort((a, b) => a.label.localeCompare(b.label, 'en', { sensitivity: 'base' }))
     }
     return rows
 }
