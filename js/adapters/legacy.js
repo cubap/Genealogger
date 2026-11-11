@@ -23,14 +23,17 @@
  *   ValueObject's evidence.
  * - Bare v1 keys map onto preferred standard URIs where one exists
  *   (schema.org etc.); `hasFather`/`hasMother` map to nv:hasParent;
- *   `hasAgent` maps to nv:participant; `additionalType` ('Birth', 'Death')
- *   maps to the Event subtype URI. Unknown bare keys are kept verbatim as
- *   their bare name so no data is dropped.
+ *   `hasAgent` maps to nv:participant; a doc-level `additionalType` ('Birth',
+ *   'Death', ...) maps to the Event subtype URI, and an agent-level
+ *   `additionalType` ('mother', 'witness', ...) becomes that participant's
+ *   nv:role. Reference values may be a bare id or an embedded `{ '@id': ... }`
+ *   object; both are stored as the id so derived reads can match them.
+ *   Unknown bare keys are kept verbatim as their bare name so no data is dropped.
  * - Legacy `__rerum`/`@context`/`@graph` plumbing is discarded; identity keys
  *   are preserved raw.
  */
 
-import { NV, SCHEMA, TYPES, DCTERMS, EVENT_SUBTYPES } from '../model/vocabulary.js'
+import { NV, SCHEMA, TYPES, DCTERMS, EVENT_SUBTYPES, CANONICAL_ROLES } from '../model/vocabulary.js'
 
 /** Bare v1 property name -> model property URI. */
 const LEGACY_KEY_MAP = {
@@ -84,12 +87,34 @@ function mapKey(key) {
     return LEGACY_KEY_MAP[key] || key
 }
 
+/**
+ * v1 reference-valued facts (`hasAgent`, `hasFather`, …) arrive either as a bare
+ * id string or as an embedded object (`{ '@id': …, additionalType: 'mother' }`,
+ * which is how the per-agent role rode along). Downstream lookups match on the
+ * id, so unwrap to `@id` and keep the object around for its qualifiers.
+ */
+function refId(value) {
+    return value && typeof value === 'object' && typeof value['@id'] === 'string' ? value['@id'] : null
+}
+
+/** Case-insensitive `nv:` role URIs for the v1 `additionalType` spellings. */
+const LEGACY_ROLES = Object.fromEntries(
+    Object.entries(CANONICAL_ROLES).map(([token, uri]) => [token.toLowerCase(), uri])
+)
+
+function legacyRole(item) {
+    const token = rawValue(item && item.additionalType)
+    if (typeof token !== 'string' || !token.trim()) return NV.child
+    return LEGACY_ROLES[token.trim().toLowerCase()] || token.trim()
+}
+
 function legacyValueObjects(key, entry) {
     const property = mapKey(key)
     const entries = Array.isArray(entry) ? entry : [entry]
     const vos = []
     for (const item of entries) {
-        const value = rawValue(item)
+        const raw = rawValue(item)
+        const value = refId(raw) || raw
         if (value === undefined || value === null) continue
         const vo = { value }
         if (item && typeof item === 'object' && (item.name || item.source || item.comment)) {
@@ -98,7 +123,7 @@ function legacyValueObjects(key, entry) {
             if (item.source) vo.source.citationSource = String(item.source)
             if (item.comment) vo.source.comment = String(item.comment)
         }
-        vos.push({ property, vo })
+        vos.push({ property, vo, item })
     }
     return vos
 }
@@ -184,16 +209,17 @@ export function convertLegacyEntity(entity) {
             continue
         }
         if (key === 'hasFather' || key === 'hasMother') {
-            makeAnnotation(NV.hasParent, { value: rawValue(entry) })
+            makeAnnotation(NV.hasParent, { value: refId(rawValue(entry)) || rawValue(entry) })
             continue
         }
         if (key === 'hasGodparent') {
-            makeAnnotation(NV.participant, { value: rawValue(entry) })
+            makeAnnotation(NV.participant, { value: refId(rawValue(entry)) || rawValue(entry) })
             continue
         }
-        for (const { property, vo } of legacyValueObjects(key, entry)) {
+        for (const { property, vo, item } of legacyValueObjects(key, entry)) {
             if (property === NV.participant) {
-                const body = { [property]: vo, [NV.role]: { value: NV.child } }
+                if (evidence && !vo.evidence) vo.evidence = evidence
+                const body = { [property]: vo, [NV.role]: { value: legacyRole(item) } }
                 annotations.push({
                     '@id': `${primary['@id']}#legacy-agent-${annotations.length}`,
                     type: 'Annotation',

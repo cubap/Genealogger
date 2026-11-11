@@ -7,6 +7,8 @@
 import { createMemoryStore } from '../../js/adapters/memory-store.js'
 import { readDevstoreJson, convertLegacyEntity, convertLegacyAnnotation, loadLegacy } from '../../js/adapters/legacy.js'
 import { assert as assertAnnotation } from '../../js/model/assertions.js'
+import { eventsForPerson } from '../../js/model/search.js'
+import { participations } from '../../js/model/events.js'
 import { getPerson } from '../../js/model/person.js'
 import { SCHEMA, NV, EVENT_SUBTYPES, typeTokens } from '../../js/model/vocabulary.js'
 
@@ -194,5 +196,89 @@ describe('convertLegacyEntity and the subtype mirror', () => {
         expect(annos.length).toBe(1)
         expect(annos[0].body[SCHEMA.givenName].value).toBe('Ada')
         expect(bare['@type']).toBe('Person')
+    })
+})
+
+/**
+ * v1 also spelled reference-valued facts as embedded objects, and that is the
+ * shape in which the per-agent role rode along:
+ * `hasAgent: [{ '@id': '…/v1/p1', additionalType: 'mother' }]`. Left as the raw
+ * object, `nv:participant` never matches a person id, so the whole event vanishes
+ * from every derived read (birth, death, parents, tree, timeline).
+ */
+describe('convertLegacyEntity and object-shaped references', () => {
+    const MOTHER = 'https://devstore.rerum.io/v1/id/mother1'
+    const CHILD = 'https://devstore.rerum.io/v1/id/child1'
+    const EVENT = 'https://devstore.rerum.io/v1/id/evt1'
+
+    const legacyBirthEvent = {
+        '@id': EVENT,
+        '@type': 'Event',
+        additionalType: 'Birth',
+        label: 'Birth of Ada',
+        hasAgent: [
+            { '@id': MOTHER, additionalType: 'mother' },
+            { '@id': CHILD, additionalType: 'child' },
+            { '@id': 'https://devstore.rerum.io/v1/id/w1', additionalType: 'witness' },
+            { '@id': 'https://devstore.rerum.io/v1/id/x1', additionalType: 'midwife' }
+        ],
+        evidence: LEGACY_EVIDENCE
+    }
+
+    it('unwraps embedded refs and lifts the per-agent role', () => {
+        const annos = convertLegacyEntity(legacyBirthEvent).filter(d => d.type === 'Annotation')
+        const rows = annos
+            .filter(a => a.body[NV.participant])
+            .map(a => ({ agent: a.body[NV.participant].value, role: a.body[NV.role].value }))
+        expect(rows).toContainEqual({ agent: MOTHER, role: NV.mother })
+        expect(rows).toContainEqual({ agent: CHILD, role: NV.child })
+        expect(rows).toContainEqual({ agent: 'https://devstore.rerum.io/v1/id/w1', role: NV.witness })
+        // An unfamiliar v1 role is kept verbatim rather than silently relabelled
+        // as `child`, which would invent a parentage edge.
+        expect(rows).toContainEqual({ agent: 'https://devstore.rerum.io/v1/id/x1', role: 'midwife' })
+        for (const row of rows) expect(typeof row.agent).toBe('string')
+    })
+
+    it('keeps the document-level evidence on every converted participation', () => {
+        const annos = convertLegacyEntity(legacyBirthEvent).filter(d => d.type === 'Annotation')
+        for (const anno of annos.filter(a => a.body[NV.participant])) {
+            expect(anno.body[NV.participant].evidence).toBe(LEGACY_EVIDENCE)
+        }
+    })
+
+    it('unwraps an object-valued hasFather into the parent id', () => {
+        const annos = convertLegacyEntity({
+            '@id': CHILD,
+            '@type': 'Person',
+            hasFather: { '@id': 'https://devstore.rerum.io/v1/id/father9' }
+        }).filter(d => d.type === 'Annotation')
+        expect(annos.map(a => a.body[NV.hasParent].value)).toEqual(['https://devstore.rerum.io/v1/id/father9'])
+    })
+
+    it('lets a model read find the event through the legacy fallback scan', async () => {
+        // The bug this pins: before unwrapping, `participations()` compared a
+        // person id against an object and the event surfaced for nobody.
+        const store = createMemoryStore()
+        for (const doc of readDevstoreJson([
+            { '@id': MOTHER, '@type': 'Person', givenName: 'Annabella' },
+            legacyBirthEvent
+        ])) {
+            store.create(doc)
+        }
+        const birthEvents = await eventsForPerson({
+            store,
+            personId: MOTHER,
+            role: NV.mother,
+            legacyTypes: typeTokens(EVENT_SUBTYPES.Birth)
+        })
+        expect(birthEvents.map(e => e['@id'])).toEqual([EVENT])
+        const rows = await participations({ store, event: birthEvents[0] })
+        const seen = rows.map(r => `${r.agent} -> ${r.role}`).sort()
+        expect(seen).toEqual([
+            `${CHILD} -> ${NV.child}`,
+            `${MOTHER} -> ${NV.mother}`,
+            'https://devstore.rerum.io/v1/id/w1 -> ' + NV.witness,
+            'https://devstore.rerum.io/v1/id/x1 -> midwife'
+        ].sort())
     })
 })
