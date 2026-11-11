@@ -29,7 +29,7 @@
  * index comes back empty.
  */
 
-import { NV, SCHEMA, TYPES, EVENT_SUBTYPES, typeTokens, term } from './vocabulary.js'
+import { NV, SCHEMA, TYPES, EVENT_SUBTYPES, CANONICAL_ROLES, typeTokens } from './vocabulary.js'
 import { createEntity, createPerson, readEntity } from './entities.js'
 import { createEvent, participate, participations, assertOutcome, eventProvenance, deriveParentAssertions } from './events.js'
 import { list as listAssertions, valueObjectsFor } from './assertions.js'
@@ -38,21 +38,18 @@ import { eventsForPerson } from './search.js'
 import { getDefaultStore } from './default-store.js'
 
 /**
- * Death-participant roles. `witness`/`attendant` have no token in the shared
- * vocabulary yet, so this slice mints them from the nv namespace with the public
- * term() helper — events.participate() accepts any role URI. Hoisting them into
- * vocabulary.CANONICAL_ROLES is a later tidy-up; keeping it here stops the
- * parallel M3 page slices from colliding on vocabulary.js.
+ * Death-participant roles. Every one of these is a canonical vocabulary role now;
+ * the slice used to mint `witness`/`attendant` locally while vocabulary.js was a
+ * collision point for the parallel M3 pages. Naming them here keeps the death
+ * page's accepted role tokens an explicit subset of CANONICAL_ROLES -- a role
+ * that is not in the vocabulary cannot be submitted by this form.
  */
-const NV_WITNESS = term('nv', 'witness')
-const NV_ATTENDANT = term('nv', 'attendant')
-
 export const ROLE_TOKENS = {
-    child: NV.child,
-    parent: NV.parent,
-    witness: NV_WITNESS,
-    attendant: NV_ATTENDANT,
-    informant: NV.informant
+    child: CANONICAL_ROLES.child,
+    parent: CANONICAL_ROLES.parent,
+    witness: CANONICAL_ROLES.witness,
+    attendant: CANONICAL_ROLES.attendant,
+    informant: CANONICAL_ROLES.informant
 }
 
 /** Human labels for the properties the death page surfaces (read view). */
@@ -191,7 +188,7 @@ export async function saveDeath(options = {}) {
     // 5. Witnesses, attendants, informants and parents are participants with roles.
     for (const participant of participants) {
         if (!participant) continue
-        const role = ROLE_TOKENS[participant.role] || participant.role || NV_WITNESS
+        const role = ROLE_TOKENS[participant.role] || participant.role || ROLE_TOKENS.witness
         let agentId = participant.agentId
         if (!agentId) {
             const label = fullName(participant.name) || participant.label

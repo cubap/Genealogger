@@ -12,7 +12,7 @@ import { saveDeath, loadDeath, ROLE_TOKENS } from '../../js/model/death.js'
 import { createPerson } from '../../js/model/entities.js'
 import { createEvent, participate } from '../../js/model/events.js'
 import { childrenOf } from '../../js/model/search.js'
-import { NV, SCHEMA, EVENT_SUBTYPES } from '../../js/model/vocabulary.js'
+import { NV, SCHEMA, EVENT_SUBTYPES, CANONICAL_ROLES } from '../../js/model/vocabulary.js'
 
 const HAS_CHILD = 'https://cubap.github.io/Genealogger/nv#hasChild'
 const DCTERMS_SOURCE = 'http://purl.org/dc/terms/source'
@@ -22,6 +22,19 @@ async function seed(options) {
     const result = await saveDeath({ store, ...options })
     return { store, result }
 }
+
+describe('ROLE_TOKENS', () => {
+    test('every role the death page can submit is a canonical vocabulary role', () => {
+        const canonical = Object.values(CANONICAL_ROLES)
+        for (const [token, uri] of Object.entries(ROLE_TOKENS)) {
+            expect(canonical, `'${token}' mints a role outside the vocabulary`).toContain(uri)
+        }
+        // witness/attendant were page-local minting while vocabulary.js was a
+        // collision point for the parallel slices; they are shared terms now.
+        expect(ROLE_TOKENS.witness).toBe(NV.witness)
+        expect(ROLE_TOKENS.attendant).toBe(NV.attendant)
+    })
+})
 
 describe('saveDeath', () => {
     test('requires the evidence document to be named separately', async () => {

@@ -52,7 +52,9 @@ export const NV = {
     mother: term('nv', 'mother'),
     father: term('nv', 'father'),
     godParent: term('nv', 'godParent'),
-    informant: term('nv', 'informant')
+    informant: term('nv', 'informant'),
+    witness: term('nv', 'witness'),
+    attendant: term('nv', 'attendant')
 }
 
 /**
@@ -98,7 +100,9 @@ export const CANONICAL_ROLES = {
     mother: NV.mother,
     father: NV.father,
     godParent: NV.godParent,
-    informant: NV.informant
+    informant: NV.informant,
+    witness: NV.witness,
+    attendant: NV.attendant
 }
 
 /** schema.org terms used for facts asserted about people. */
