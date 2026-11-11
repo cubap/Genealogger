@@ -14,11 +14,15 @@
  *
  * Attributes / properties
  *   row        {Object} view row: { property, propertyLabel, value, evidence,
- *                    evidenceLabel, confidence }
+ *                    evidenceLabel, confidence, qualifiers?, conflicting? }
  *   readonly   {boolean} hide the confidence control (migrated view)
  *
  * Events (bubbles, composed)
  *   gl-confidence-change  detail: { property, value, confidence }
+ *
+ * Pure helpers exported: CONFIDENCE_LEVELS, parseConfidence, formatConfidence,
+ * toAssertionRows (ValueObjects -> ordered rows, qualifiers included) and
+ * toAssertionGroups (rows -> one group per assertion type, conflicts flagged).
  */
 
 import { NV } from '../model/vocabulary.js'
@@ -78,6 +82,30 @@ function confidenceToken(value) {
     return String(parsed)
 }
 
+/** Keys a ValueObject always reserves; anything else is a qualifier on it. */
+const RESERVED_VO_KEYS = ['value', 'source', 'evidence', NV.confidence]
+
+/**
+ * Every extra key a ValueObject carries beyond value/source/evidence/confidence,
+ * as `{ key, label, value }`. This is how a name assertion ships its type and
+ * active range without inventing a second, unjoinable annotation.
+ * @param {Object} vo a resolved ValueObject
+ * @param {Object<string,string>} [qualifierLabels] property URI -> display label
+ * @returns {Array<Object>} qualifiers, empty for a plain ValueObject
+ */
+function qualifiersOf(vo, qualifierLabels = {}) {
+    const qualifiers = []
+    for (const [key, raw] of Object.entries(vo)) {
+        if (RESERVED_VO_KEYS.includes(key)) continue
+        // A qualifier is itself a ValueObject; one with no value carries nothing.
+        if (raw && typeof raw === 'object' && !('value' in raw)) continue
+        const value = raw && typeof raw === 'object' ? raw.value : raw
+        if (value === undefined || value === null || value === '') continue
+        qualifiers.push({ key, label: qualifierLabels[key] || key.split(/[#/]/).pop(), value })
+    }
+    return qualifiers
+}
+
 /**
  * Flatten a grouped-assertions map (property -> ValueObject | ValueObject[])
  * into an ordered list of view rows. One row per ValueObject, so two disagreeing
@@ -87,10 +115,11 @@ function confidenceToken(value) {
  * @param {Object<string,string>} [options.propertyLabels] property URI -> label
  * @param {Object<string,string>} [options.evidenceLabels] evidence id -> label
  * @param {Array<string>} [options.order] preferred property order
+ * @param {Object<string,string>} [options.qualifierLabels] qualifier URI -> label
  * @returns {Array<Object>} view rows
  */
 export function toAssertionRows(grouped = {}, options = {}) {
-    const { propertyLabels = {}, evidenceLabels = {}, order } = options
+    const { propertyLabels = {}, evidenceLabels = {}, qualifierLabels = {}, order } = options
     const properties = order
         ? [...order.filter(p => p in grouped), ...Object.keys(grouped).filter(p => !order.includes(p))]
         : Object.keys(grouped)
@@ -101,7 +130,7 @@ export function toAssertionRows(grouped = {}, options = {}) {
         for (const vo of valueObjects) {
             if (!vo || typeof vo !== 'object') continue
             const evidence = vo.evidence
-            rows.push({
+            const row = {
                 property,
                 propertyLabel: propertyLabels[property] || property.split(/[#/]/).pop(),
                 value: vo.value,
@@ -110,10 +139,39 @@ export function toAssertionRows(grouped = {}, options = {}) {
                 evidence,
                 evidenceLabel: (evidence && evidenceLabels[evidence]) || evidence || '',
                 confidence: vo[NV.confidence]
-            })
+            }
+            const qualifiers = qualifiersOf(vo, qualifierLabels)
+            if (qualifiers.length) row.qualifiers = qualifiers
+            rows.push(row)
         }
     }
     return rows
+}
+
+/**
+ * Bucket flat assertion rows into one group per assertion type — the audit view
+ * of #14 story 3 — and mark a group `conflicting` when it holds more than one
+ * distinct value. Grouping never merges rows: a conflict is two rows displayed
+ * side by side, which is exactly what the flag tells the page to highlight.
+ * @param {Array<Object>} rows output of toAssertionRows()
+ * @returns {Array<{property: string, propertyLabel: string, conflicting: boolean, rows: Array<Object>}>}
+ */
+export function toAssertionGroups(rows = []) {
+    const groups = []
+    const byProperty = new Map()
+    for (const row of rows) {
+        if (!byProperty.has(row.property)) {
+            const group = { property: row.property, propertyLabel: row.propertyLabel, conflicting: false, rows: [] }
+            byProperty.set(row.property, group)
+            groups.push(group)
+        }
+        byProperty.get(row.property).rows.push(row)
+    }
+    for (const group of groups) {
+        const values = new Set(group.rows.map(row => String(row.value ?? '')))
+        group.conflicting = values.size > 1
+    }
+    return groups
 }
 
 export class GLAssertion extends HTMLElement {
@@ -163,6 +221,9 @@ export class GLAssertion extends HTMLElement {
         }
         const readonly = this.readonly
         const token = confidenceToken(row.confidence)
+        const qualifierText = (row.qualifiers || [])
+            .map(qualifier => `${qualifier.label}: ${String(qualifier.value ?? '')}`)
+            .join(' · ')
         const options = CONFIDENCE_LEVELS
             .map(level => `<option value="${level.token}"${level.token === token ? ' selected' : ''}>${level.label}</option>`)
             .join('')
@@ -173,13 +234,16 @@ export class GLAssertion extends HTMLElement {
                 .value { margin-left: 0.4rem; }
                 .meta { display: block; font-size: 0.85rem; color: #556; margin-top: 0.15rem; }
                 .conf { margin-left: 0.5rem; }
+                .conflict { margin-left: 0.5rem; font-size: 0.75rem; color: #8a2b2b; border: 1px solid #8a2b2b; border-radius: 3px; padding: 0 0.25rem; }
             </style>
             <span class="prop">${escapeHtml(row.propertyLabel)}</span>
             <span class="value">${escapeHtml(String(row.value ?? ''))}</span>
+            ${row.conflicting ? '<span class="conflict">conflicting claims</span>' : ''}
             <span class="meta">
                 evidence: ${escapeHtml(row.evidenceLabel || '—')}
                 <span class="conf">confidence: ${escapeHtml(formatConfidence(row.confidence) || '—')}</span>
                 ${row.comment ? `&nbsp;(${escapeHtml(row.comment)})` : ''}
+                ${qualifierText ? `&nbsp;·&nbsp;${escapeHtml(qualifierText)}` : ''}
             </span>
             ${readonly ? '' : `<label class="meta">Set confidence
                 <select class="confidence">${options}</select>
