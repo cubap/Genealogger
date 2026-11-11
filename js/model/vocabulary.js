@@ -70,6 +70,25 @@ export const EVENT_SUBTYPES = {
 }
 
 /**
+ * Every '@type' token under which the given subtypes can be found in a store.
+ * New-shape documents carry the full URI; migrated DEER v1 documents carry the
+ * bare local name ('Birth'), and devstore matches '@type' exactly -- so a search
+ * that must see both generations has to ask for both spellings.
+ * @param {...(string|Array<string>)} subtypes type URIs, or arrays of them
+ * @returns {Array<string>} each URI followed by its bare fragment, de-duplicated
+ */
+export function typeTokens(...subtypes) {
+    const tokens = []
+    for (const value of subtypes.flat()) {
+        if (!value || tokens.includes(value)) continue
+        tokens.push(value)
+        const bare = String(value).split(/[#/]/).pop()
+        if (bare && !tokens.includes(bare)) tokens.push(bare)
+    }
+    return tokens
+}
+
+/**
  * Canonical participation roles. Following the W3C Property of a Role pattern,
  * a role is asserted alongside the participant on an event.
  */
