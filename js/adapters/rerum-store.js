@@ -36,7 +36,7 @@
 
 import config from '../model/config.js'
 import { assertStore, relOf } from './store.js'
-import { convertLegacyEntity, convertLegacyAnnotation } from './legacy.js'
+import { convertLegacyEntity, convertLegacyAnnotation, isSubtypeMirror } from './legacy.js'
 
 const clone = doc => JSON.parse(JSON.stringify(doc))
 
@@ -86,14 +86,15 @@ const PLUMBING_KEYS = ['@id', '@type', '@context', '@graph', '__rerum', 'label',
  * versioning metadata on every document it serves, new shape included, so the
  * metadata says nothing about shape. (An earlier cut keyed off `__rerum` and
  * exploded every real annotation into `#legacy-*` pseudo-facts on read.) A
- * non-annotation document is legacy when it carries facts directly on itself.
+ * non-annotation document is legacy when it carries facts directly on itself —
+ * except the dcterms:type subtype mirror, which the new shape writes itself.
  * @param {Object} raw a document straight from the store
  * @returns {Array<Object>} new-shape document(s)
  */
 function migrate(raw) {
     if (!raw || typeof raw !== 'object') return []
     const isLegacyEntity = !isAnnotation(raw) && Boolean(raw['@id']) &&
-        Object.keys(raw).some(key => !PLUMBING_KEYS.includes(key))
+        Object.keys(raw).some(key => !PLUMBING_KEYS.includes(key) && !isSubtypeMirror(raw, key))
     const isLegacyAnnotation = isAnnotation(raw) && raw.body && (
         Object.values(raw.body).some(entry => entry && typeof entry === 'object' && !('value' in entry) && Object.keys(entry).some(k => !['value', 'source', 'evidence', 'https://cubap.github.io/Genealogger/nv#confidence'].includes(k)))
     )
@@ -135,15 +136,19 @@ export class RerumStore {
      */
     constructor(options = {}) {
         const {
-            fetchImpl = globalThis.fetch,
+            fetchImpl,
             writeBase = config.URLS.API_BASE,
             readBases = config.URLS.READ_BASE_URIS,
             queryBase = config.URLS.API_BASE
         } = options
-        if (typeof fetchImpl !== 'function') {
+        if (fetchImpl !== undefined && typeof fetchImpl !== 'function') {
             throw new TypeError('RerumStore requires a fetch implementation (inject fetchImpl in tests)')
         }
+        // Keep the call late-bound: `const f = fetch; f(...)` detaches the native
+        // method from Window and Chromium throws "Illegal invocation".
         this.fetch = fetchImpl
+            ? ((...args) => fetchImpl(...args))
+            : ((...args) => globalThis.fetch(...args))
         this.writeBase = writeBase.replace(/\/$/, '')
         this.readBases = readBases.map(base => base.replace(/\/$/, ''))
         this.queryBase = queryBase.replace(/\/$/, '')
