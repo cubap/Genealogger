@@ -12,7 +12,7 @@
 // network layer, so the browser leg cannot mutate the store even if a page
 // regressed into saving on load. Records are left behind, like the node smoke's.
 //
-// Pages covered: index (list), birth, death, person (hub), parents, tree.
+// Pages covered: index (list), birth, death, person (hub), parents, tree, timeline.
 // Add a leg here when a page lands — it is the only proof that a page reads real
 // devstore data, and it has already caught two browser-only adapter defects that
 // no injected-fake test could see.
@@ -222,6 +222,32 @@ try {
     // SVG <text> has no innerText; read the rendered label text directly.
     const edgeLabels = await page.$$eval('gl-tree-view text.edge-label', els => els.map(el => el.textContent))
     check('the edge is labelled with its role', edgeLabels.some(label => /mother/i.test(label)), edgeLabels)
+
+    console.log('\ntimeline.html?store=rerum (ancestor rows and dated markers)')
+    check('the timeline loads', (await open(`${origin}/timeline.html?person=${encodeURIComponent(death.personId)}&store=rerum`)) === 200)
+    await settle(() => /Ancestor timeline for/.test(document.getElementById('timelineStatus').textContent))
+    const timelineStatus = await text('#timelineStatus')
+    check('the status names the subject by the shared label rule',
+        /Ancestor timeline for Died Probe: 2 people/.test(timelineStatus), timelineStatus)
+    check('the dated facts of both generations are counted',
+        /\d+ dated assertions/.test(timelineStatus), timelineStatus)
+    check('a new-shape family is not flagged as legacy', !/DEER v1/.test(timelineStatus), timelineStatus)
+    // One row per person in the shadow tree; Playwright's CSS pierces open roots.
+    const whoRows = await page.$$eval('gl-ancestor-timeline text.who', els => els.map(el => el.textContent))
+    check('both ancestors get a row',
+        whoRows.includes('Died Probe') && whoRows.includes('Browser Probe'), whoRows)
+    const markers = await page.$$eval('gl-ancestor-timeline text.m-sub', els => els.map(el => el.textContent))
+    check('markers name the role and the event subtype',
+        markers.some(label => /child · Birth/i.test(label)) && markers.some(label => /child · Death/i.test(label)),
+        markers)
+    const markerDates = await page.$$eval('gl-ancestor-timeline text.m-date', els => els.map(el => el.textContent))
+    check('the markers carry the real years',
+        markerDates.some(label => label.includes('1898')) && markerDates.some(label => label.includes('1962')),
+        markerDates)
+    const timelineEvidence = await page.$$eval('gl-ancestor-timeline text.m-ev', els => els.map(el => el.textContent))
+    check('every marker cites a source document',
+        timelineEvidence.length > 0 && timelineEvidence.every(label => !/no evidence cited/.test(label)),
+        timelineEvidence)
 
     console.log('\nthe network layer')
     check('the pages really queried devstore', queries > 0, queries)
