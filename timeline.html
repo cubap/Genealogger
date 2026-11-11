@@ -7,11 +7,10 @@
     The old deer-ancestor-timeline carried a hard-coded demo family inside the
     component; the sample-family button here only navigates to ?store=fixture,
     whose data lives in js/adapters/fixtures/sample-family.js. Pan/zoom is gone
-    in favour of a native horizontal scroller. timeline-standalone.html still
-    exists on disk (the m3-legacy-deletion slice owns removing DEER v1 files),
-    but nothing links to it any more: the old fallback redirect lived in this
-    page's DEER v1 script tag, which is gone, so the standalone copy is now
-    reachable only by typing its URL directly.
+    in favour of a native horizontal scroller. The DEER v1 copy of this page
+    (timeline-standalone.html) went away with the rest of the v1 runtime, which
+    M3 deleted; the fallback redirect to it had already been dropped when this
+    page was rebuilt. Git history still has both.
 -->
 <html lang="en">
     <head>

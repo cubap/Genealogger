@@ -8,7 +8,7 @@ export default defineConfig({
     include: ['unit/**/*.test.js'],
     exclude: ['e2e/**'],
     coverage: {
-      include: ['js/utils/**/*.js']
+      include: ['js/**/*.js']
     }
   }
 })

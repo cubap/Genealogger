@@ -1,7 +1,13 @@
 # Genealogger Project Plan
 
+> **Status: partly superseded.** This is the original MVP plan, written while the app still ran the
+> DEER v1 runtime. Milestones M1–M3 (the eventities rebuild: `js/model` + `js/adapters` seams, the
+> `gl-*` pages, and the deletion of the v1 runtime) are done; see the README,
+> `docs/page-model-adapter.md`, and issue #14 for what the code actually is. The plan is kept as the
+> record of intent, not as the current spec.
+
 ## Project Overview
-Genealogger is a web-based genealogy application using the DEER (Data Encoding and Exhibition for RERUM) framework. It enables users to create, manage, and visualize family relationships through interactive family trees and ancestor timelines.
+Genealogger is a web-based genealogy application for recording person records as evidenced annotations in RERUM. It enables users to create, manage, and visualize family relationships through interactive family trees and ancestor timelines.
 
 **Current State:**
 - Static HTML/JS frontend with custom web components
@@ -50,13 +56,13 @@ Genealogger is a web-based genealogy application using the DEER (Data Encoding a
 - **Week 6:** Launch and retrospective
 
 ## Technical Stack
-- **Frontend:** Vanilla JavaScript (ES6+), HTML5, CSS3
-- **Components:** Custom Web Components (DEER framework)
-- **Data Storage:** RERUM/TinyThings APIs (JSON-LD, Web Annotations)
-- **Visualization:** D3.js (family trees, timelines)
-- **Testing:** Jest (unit tests), Playwright (E2E tests)
+- **Frontend:** Vanilla JavaScript (ES6+), HTML5, CSS3 — no build step
+- **Components:** Custom Web Elements (`gl-*`), shaped by DEER v2's element conventions
+- **Data Storage:** RERUM/TinyThings APIs (JSON-LD, Web Annotations); `?store=local|memory|fixture` for offline
+- **Visualization:** hand-rolled SVG (`gl-tree-view`) and DOM rows (`gl-ancestor-timeline`) — no charting dependency
+- **Testing:** Vitest (unit), Playwright (E2E + opt-in live devstore smoke)
 - **CI/CD:** GitHub Actions
-- **Monitoring:** Custom error logger, Sentry (optional)
+- **Monitoring:** page-level error banners; the v1 error logger was removed with the rest of DEER v1
 - **Deployment:** GitHub Pages (static hosting)
 
 ## Risks & Mitigations
