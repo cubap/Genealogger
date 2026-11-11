@@ -13,12 +13,14 @@ import {
     normalizeQuery,
     matchesQuery,
     listPersons,
+    eventsForPerson,
     UNLABELED
 } from '../../js/model/search.js'
+import { participate } from '../../js/model/events.js'
 import { createMemoryStore } from '../../js/adapters/memory-store.js'
 import { createFixtureStore } from '../../js/adapters/fixture-store.js'
 import { resetDefaultStore } from '../../js/model/default-store.js'
-import { SCHEMA, TYPES } from '../../js/model/vocabulary.js'
+import { NV, SCHEMA, TYPES } from '../../js/model/vocabulary.js'
 
 const ID = 'https://devstore.rerum.io/v1/id/person-'
 
@@ -34,6 +36,9 @@ function countingStore(inner) {
     const calls = { listByType: 0, query: 0, read: 0 }
     return {
         calls,
+        create: doc => inner.create(doc),
+        update: doc => inner.update(doc),
+        remove: id => inner.remove(id),
         listByType: type => {
             calls.listByType++
             return inner.listByType(type)
@@ -225,5 +230,86 @@ describe('listPersons', () => {
     test('reads the shipped fixture family', async () => {
         const rows = await listPersons({ store: createFixtureStore() })
         expect(rows.map(row => row.label)).toEqual(['Ada Gordon', 'Anne Milbanke', 'George Gordon'])
+    })
+})
+
+describe('eventsForPerson legacyTypes (documents written before the rel index)', () => {
+    const EVENT = 'https://devstore.rerum.io/v1/BIRTHEVENT'
+
+    /**
+     * A DEER v1 birth/death document and its `hasAgent` participation, exactly as
+     * model/search sees them AFTER the legacy reader has exploded them: a bare
+     * entity typed with the v1 name plus an annotation carrying NO top-level rel,
+     * so the `rel: personId` lookup cannot find it (docs/devstore-query-contract.md).
+     */
+    async function seedUnindexedParticipation(store, personId, role = NV.child) {
+        await store.create({ '@id': EVENT, '@type': 'Birth', label: 'Parish register' })
+        await store.create({
+            '@id': `${EVENT}#legacy-agent-0`,
+            type: 'Annotation',
+            target: EVENT,
+            body: { [NV.participant]: { value: personId }, [NV.role]: { value: role } }
+        })
+        return EVENT
+    }
+
+    test('enumerates the named types when the rel index comes back empty', async () => {
+        const store = createMemoryStore()
+        const ada = person('ada', { label: 'Ada Byron' })
+        await store.create(ada)
+        await seedUnindexedParticipation(store, ada['@id'])
+
+        const events = await eventsForPerson({
+            store,
+            personId: ada['@id'],
+            role: NV.child,
+            legacyTypes: ['Birth']
+        })
+        expect(events.map(event => event['@id'])).toEqual([EVENT])
+    })
+
+    test('the scan honours the role, so a witness is not a subject', async () => {
+        const store = createMemoryStore()
+        const ada = person('ada', { label: 'Ada Byron' })
+        await store.create(ada)
+        await seedUnindexedParticipation(store, ada['@id'], NV.mother)
+
+        const events = await eventsForPerson({
+            store,
+            personId: ada['@id'],
+            role: NV.child,
+            legacyTypes: ['Birth']
+        })
+        expect(events).toEqual([])
+    })
+
+    test('an indexed participation is still a single query: no type is enumerated', async () => {
+        const inner = createMemoryStore()
+        const counted = countingStore(inner)
+        const ada = person('ada', { label: 'Ada Byron' })
+        await inner.create(ada)
+        await inner.create({ '@id': EVENT, '@type': 'Birth', label: 'Parish register' })
+        await participate({ store: counted, event: EVENT, agent: ada['@id'], role: NV.child })
+
+        const events = await eventsForPerson({
+            store: counted,
+            personId: ada['@id'],
+            role: NV.child,
+            legacyTypes: ['Birth']
+        })
+        expect(events.map(event => event['@id'])).toEqual([EVENT])
+        expect(counted.calls.listByType).toBe(0)
+    })
+
+    test('without legacyTypes an un-indexed event stays unreachable (no unbounded scan)', async () => {
+        const inner = createMemoryStore()
+        const counted = countingStore(inner)
+        const ada = person('ada', { label: 'Ada Byron' })
+        await inner.create(ada)
+        await seedUnindexedParticipation(inner, ada['@id'])
+
+        const events = await eventsForPerson({ store: counted, personId: ada['@id'], role: NV.child })
+        expect(events).toEqual([])
+        expect(counted.calls.listByType).toBe(0)
     })
 })

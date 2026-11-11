@@ -15,6 +15,7 @@
 
 import { NV, SCHEMA, TYPES } from './vocabulary.js'
 import { list as listAssertions, valueObjectsFor } from './assertions.js'
+import { participations } from './events.js'
 import { getDefaultStore } from './default-store.js'
 
 /**
@@ -66,15 +67,29 @@ export async function personsByAnnotationType(options = {}) {
 }
 
 /**
- * Events a Person participated in, via (event, agent, role) annotations.
+ * Events a Person took part in, via (event, agent, role) annotations.
+ *
+ * The normal read is ONE `rel` lookup: every participation written by
+ * `events.participate()` indexes both its agent and its event, so asking the
+ * store for `rel: personId` finds the rows without scanning (see
+ * docs/devstore-query-contract.md). Documents written BEFORE that index existed
+ * -- every migrated DEER v1 record -- carry no `rel`, and the server cannot
+ * filter on a field a document does not have. When the caller names the event
+ * types it cares about (`legacyTypes`), an empty index result triggers a bounded
+ * enumeration of those types instead: `listByType()` plus per-event `target`
+ * queries are the two shapes devstore can answer. The fallback never runs when
+ * the index has data, so new-shape reads stay single-query.
  * @param {Object} [options]
  * @param {Object} [options.store]
  * @param {string} options.personId
  * @param {string} [options.role] optional canonical role filter (NV.child...)
+ * @param {Array<string>} [options.legacyTypes] '@type' tokens to enumerate when
+ *   the rel index is empty; include both the bare v1 token ('Birth') and the
+ *   canonical URI, since v1 documents store the bare word
  * @returns {Promise<Array<Object>>} Event entities
  */
 export async function eventsForPerson(options = {}) {
-    const { store = getDefaultStore(), personId, role } = options
+    const { store = getDefaultStore(), personId, role, legacyTypes } = options
     if (!personId) throw new TypeError('eventsForPerson() requires a personId')
     const annos = await store.query({ rel: personId, type: NV.participant })
     const eventIds = [...new Set(annos
@@ -85,7 +100,33 @@ export async function eventsForPerson(options = {}) {
         const entity = await store.read(id)
         if (entity) events.push(entity)
     }
-    return events
+    if (events.length || !legacyTypes || !legacyTypes.length) return events
+    return eventsWithoutIndex({ store, personId, role, legacyTypes })
+}
+
+/**
+ * The bounded scan behind `legacyTypes`: find events of the given types whose
+ * participations name this person (in this role, when a role is given). Kept
+ * separate so a page can filter the results by subtype without re-implementing
+ * the enumeration.
+ * @param {Object} options see `eventsForPerson`
+ * @returns {Promise<Array<Object>>} Event entities
+ */
+export async function eventsWithoutIndex(options = {}) {
+    const { store = getDefaultStore(), personId, role, legacyTypes = [] } = options
+    if (!personId) throw new TypeError('eventsWithoutIndex() requires a personId')
+    const found = []
+    for (const token of legacyTypes) {
+        for (const event of await store.listByType(token)) {
+            if (!event || !event['@id']) continue
+            if (found.some(other => other['@id'] === event['@id'])) continue
+            const rows = await participations({ store, event })
+            if (rows.some(row => row.agent === personId && (role === undefined || row.role === role))) {
+                found.push(event)
+            }
+        }
+    }
+    return found
 }
 
 /**
