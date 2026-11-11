@@ -2,7 +2,7 @@
 <!--
     Label page — M3 vertical slice ("give this Person a display name").
     Runs on the new stack: gl-* custom elements + js/model + an injected store
-    adapter (js/adapters). No DEER v1 (js/deer.js), no build step, no framework —
+    adapter (js/adapters). No DEER v1 runtime, no build step, no framework —
     this mirrors death.html / birth.html exactly.
     The deer-key attribute name on the form field is RETAINED as the recognised
     HTML surface vocabulary; gl-label-form reads it.
@@ -12,8 +12,8 @@
     name here asserts it as an evidenced schema:name fact AND refreshes that
     cache (model/label.saveLabel) — otherwise the index keeps calling the person
     by its old name.
-    What is gone, and why: the `deer-type="Person"` form and js/deer.js (replaced
-    by the model layer); the hidden `targetCollection` / `creator` inputs (legacy
+    What is gone, and why: the `deer-type="Person"` form and the DEER v1 runtime
+    (replaced by the model layer, then deleted at the end of M3); the hidden `targetCollection` / `creator` inputs (legacy
     plumbing the model layer does not use — the store decides both); the
     Residence / Occupation / Marriage / Depiction links (they had no href at all,
     so they never went anywhere). The links that reach real pages stayed, now with
