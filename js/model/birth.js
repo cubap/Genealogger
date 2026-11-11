@@ -22,7 +22,7 @@
  *   - nv:hasChild is NEVER written; it is computed at read time elsewhere.
  */
 
-import { NV, SCHEMA, TYPES, EVENT_SUBTYPES } from './vocabulary.js'
+import { NV, SCHEMA, TYPES, EVENT_SUBTYPES, typeTokens } from './vocabulary.js'
 import { createEntity, createPerson, readEntity } from './entities.js'
 import { createEvent, participate, participations, assertOutcome, eventProvenance, deriveParentAssertions } from './events.js'
 import { list as listAssertions } from './assertions.js'
@@ -57,6 +57,29 @@ export const ROLE_TOKENS = {
 
 /** Birth-ish event subtypes the slice recognises for the read view. */
 const BIRTH_SUBTYPES = new Set([EVENT_SUBTYPES.Birth, EVENT_SUBTYPES.Christening, EVENT_SUBTYPES.Baptism])
+
+/**
+ * Bare local name -> canonical subtype URI. A migrated DEER v1 document stores
+ * '@type: "Birth"' where a new-shape document stores the full URI, so the read
+ * view recognises both and always reports the URI.
+ */
+const BIRTH_SUBTYPE_BY_NAME = new Map([...BIRTH_SUBTYPES].map(uri => [uri.split(/[#/]/).pop(), uri]))
+
+/**
+ * The canonical birth subtype URI of an event, or null when the event is not
+ * birth-ish. Handles the v1 bare name and an '@type' array.
+ * @param {Object} event bare Event entity
+ * @returns {string|null}
+ */
+function birthSubtypeOf(event) {
+    const types = Array.isArray(event?.['@type']) ? event['@type'] : [event?.['@type']]
+    for (const type of types) {
+        if (BIRTH_SUBTYPES.has(type)) return type
+        const canonical = BIRTH_SUBTYPE_BY_NAME.get(String(type ?? '').split(/[#/]/).pop())
+        if (canonical) return canonical
+    }
+    return null
+}
 
 function fullName(name = {}) {
     if (name.full) return name.full
@@ -198,12 +221,17 @@ export async function loadBirth(options = {}) {
     const evidenceIds = []
     const personIds = []
 
-    const isBirthEvent = ev => {
-        const type = ev['@type']
-        return Array.isArray(type) ? type.some(t => BIRTH_SUBTYPES.has(t)) : BIRTH_SUBTYPES.has(type)
-    }
-    const childEvents = await eventsForPerson({ store, personId, role: NV.child })
-    for (const event of childEvents.filter(isBirthEvent)) {
+    const childEvents = await eventsForPerson({
+        store,
+        personId,
+        role: NV.child,
+        // A DEER v1 birth carries no `rel` index, so the only way to open one is
+        // to enumerate birth-typed events (user story 16: legacy records stay readable).
+        legacyTypes: typeTokens([...BIRTH_SUBTYPES])
+    })
+    for (const event of childEvents) {
+        const subtype = birthSubtypeOf(event)
+        if (!subtype) continue
         const provenance = await eventProvenance({ store, event })
         if (provenance.evidence) evidenceIds.push(provenance.evidence)
         const rows = await participations({ store, event })
@@ -213,7 +241,7 @@ export async function loadBirth(options = {}) {
         }
         events.push({
             event,
-            subtype: (Array.isArray(event['@type']) ? event['@type'].find(t => BIRTH_SUBTYPES.has(t)) : event['@type']) || EVENT_SUBTYPES.Birth,
+            subtype,
             record: provenance.evidence ? { id: provenance.evidence, confidence: provenance.confidence } : null,
             participants: rows
         })

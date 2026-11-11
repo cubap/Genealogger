@@ -8,7 +8,7 @@ import { createMemoryStore } from '../../js/adapters/memory-store.js'
 import { readDevstoreJson, convertLegacyAnnotation, loadLegacy } from '../../js/adapters/legacy.js'
 import { assert as assertAnnotation } from '../../js/model/assertions.js'
 import { getPerson } from '../../js/model/person.js'
-import { SCHEMA, NV } from '../../js/model/vocabulary.js'
+import { SCHEMA, NV, EVENT_SUBTYPES, typeTokens } from '../../js/model/vocabulary.js'
 
 const LEGACY_ID = 'https://devstore.rerum.io/v1/abc123'
 const LEGACY_EVIDENCE = 'https://devstore.rerum.io/v1/rec999'
@@ -142,5 +142,29 @@ describe('loadLegacy', () => {
     test('fails cleanly when the fetch implementation is not callable', async () => {
         await expect(loadLegacy(['x'], { fetchImpl: 'nope' }))
             .rejects.toThrow(TypeError)
+    })
+})
+/**
+ * A reverse lookup can only ask devstore for an '@type' it can match exactly.
+ * New-shape documents store the full URI, migrated v1 documents store the bare
+ * local name, so `typeTokens()` is what lets one search span both generations
+ * -- see docs/devstore-query-contract.md.
+ */
+describe('typeTokens', () => {
+    test('pairs each type URI with the bare v1 name', () => {
+        expect(typeTokens(EVENT_SUBTYPES.Death)).toEqual([EVENT_SUBTYPES.Death, 'Death'])
+    })
+
+    test('accepts an array and de-duplicates', () => {
+        const tokens = typeTokens([EVENT_SUBTYPES.Birth, EVENT_SUBTYPES.Baptism], EVENT_SUBTYPES.Birth)
+        expect(tokens).toEqual([EVENT_SUBTYPES.Birth, 'Birth', EVENT_SUBTYPES.Baptism, 'Baptism'])
+    })
+
+    test('does not duplicate a bare name that was passed in', () => {
+        expect(typeTokens('Birth', EVENT_SUBTYPES.Birth)).toEqual(['Birth', EVENT_SUBTYPES.Birth])
+    })
+
+    test('ignores empty values', () => {
+        expect(typeTokens(undefined, null, '')).toEqual([])
     })
 })

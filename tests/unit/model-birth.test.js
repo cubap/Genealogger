@@ -7,8 +7,9 @@
 
 import { createMemoryStore } from '../../js/adapters/memory-store.js'
 import { saveBirth, loadBirth } from '../../js/model/birth.js'
+import { createPerson } from '../../js/model/entities.js'
 import { childrenOf } from '../../js/model/search.js'
-import { NV, SCHEMA } from '../../js/model/vocabulary.js'
+import { NV, SCHEMA, EVENT_SUBTYPES } from '../../js/model/vocabulary.js'
 
 const HAS_CHILD = 'https://cubap.github.io/Genealogger/nv#hasChild'
 
@@ -17,6 +18,51 @@ async function seed(options) {
     const result = await saveBirth({ store, ...options })
     return { store, result }
 }
+
+describe('loadBirth legacy (DEER v1) reading', () => {
+    const EVENT_ID = 'https://devstore.rerum.io/v1/BIRTHEVENT'
+
+    /**
+     * What the legacy reader hands the model for a v1 birth: a bare entity typed
+     * with the v1 name, plus a `#legacy-agent-*` annotation naming the child and
+     * carrying no top-level `rel`. Before eventsForPerson() could enumerate the
+     * event types, loadBirth() saw none of these and a real devstore birth opened
+     * empty -- the bug that made this page useless over migrated data.
+     */
+    async function seedLegacyBirth(store, personId) {
+        await store.create({ '@id': EVENT_ID, '@type': 'Birth', label: 'Parish register' })
+        await store.create({
+            '@id': `${EVENT_ID}#legacy-agent-0`,
+            type: 'Annotation',
+            target: EVENT_ID,
+            body: { [NV.participant]: { value: personId }, [NV.role]: { value: NV.child } }
+        })
+        return EVENT_ID
+    }
+
+    test('opens a DEER v1 birth that has no rel index', async () => {
+        const store = createMemoryStore()
+        const person = await createPerson({ store, label: 'Ada Byron' })
+        const eventId = await seedLegacyBirth(store, person['@id'])
+
+        const birth = await loadBirth({ store, personId: person['@id'] })
+        expect(birth.events.map(row => row.event['@id'])).toEqual([eventId])
+        expect(birth.events[0].subtype).toBe(EVENT_SUBTYPES.Birth)
+        expect(birth.events[0].participants.map(row => row.agent)).toEqual([person['@id']])
+    })
+
+    test('a new-shape birth is found through the rel index without scanning types', async () => {
+        const { store, result } = await seed({
+            name: { given: 'Ada', family: 'Byron' },
+            evidence: { title: 'Parish certificate' },
+            birthDate: '1815-12-10'
+        })
+        const scan = vi.spyOn(store, 'listByType')
+        const birth = await loadBirth({ store, personId: result.personId })
+        expect(birth.events).toHaveLength(1)
+        expect(scan).not.toHaveBeenCalled()
+    })
+})
 
 describe('saveBirth', () => {
     test('requires the evidence document to be named separately', async () => {
