@@ -16,7 +16,7 @@ Always reference these instructions first and fall back to search or shell comma
 
 ### Commands
 - `npm run lint` — ESLint over `js/**/*.js`. Currently **0 errors / 0 warnings**; keep it there. Under 10 seconds.
-- `npx vitest run tests/unit` — unit suite (24 files / 280 tests, ~20 seconds). `npm test` runs the same thing.
+- `npx vitest run tests/unit` — unit suite (25 files / 290 tests, ~20 seconds). `npm test` runs the same thing.
 - `npx playwright test --project=chromium --workers=1` — E2E journeys (~1 minute; use `--workers=1`, parallel workers are flaky on Windows). All three browsers: `npx playwright test --workers=1`.
 - `node tests/live/browser-devstore.mjs` — **opt-in** smoke against real devstore. It writes stamped probe records to shared storage. Do not add it to CI, and do not run it unless the change justifies touching shared data.
 
@@ -37,7 +37,7 @@ Every page honours `?store=`:
 - **Entities carry at most a `label` cache.** `label` is a denormalization of the best evidenced name; `deriveLabel(entity)` (lists, bare documents) and `personLabel({ entity, assertions })` (detail) are the **one** label rule, owned by `js/model/search.js`. If those two ever disagree, `label.html` shows `#cacheNote`. Do not write a fourth labelling helper.
 - **`deer-key` is the surviving v1 attribute name**, meaning "which property this field edits". Everything else DEER v1 (`js/deer*.js`, the `deer-*` elements, `js/utils/`) was deleted at the end of M3. E2E asserts `customElements.get("deer-…")` is undefined; keep that green.
 - **DEER v1 data is still readable.** `js/adapters/legacy.js` converts v1 documents lazily. When you fix a v1 read gap, do it in the adapter or with a bounded fallback (see `legacySubjectEvents()` in `js/model/death.js`) — not by teaching pages about v1 shapes.
-- Vocabulary lives in `js/model/vocabulary.js` (canonical terms and `CANONICAL_ROLES`). Hoist a term there rather than re-minting a namespace in a page module.
+- Vocabulary lives in `js/model/vocabulary.js` (canonical terms and `CANONICAL_ROLES`). Hoist a term there rather than re-minting a namespace in a page module. `schemas/genealogger-context.jsonld` is its normative public counterpart and `GLOSSARY.md` fixes the words; `tests/unit/schemas-context.test.js` fails if code and context drift, so a new term goes in all three.
 
 `docs/page-model-adapter.md` describes the page/model/adapter contract and `docs/devstore-query-contract.md` records the store's query behaviour. Read them before changing shared seams.
 
@@ -52,7 +52,10 @@ js/model/        config, vocabulary, entities, assertions, events, search, label
                  birth, parents, death, tree, timeline, lacunae, default-store
 js/adapters/     store.js contract, rerum-store, local-store, memory-store, fixture-store,
                  store-bootstrap, legacy (v1 reader), fixtures/
-docs/            page-model-adapter.md, devstore-query-contract.md, agents/
+docs/            page-model-adapter.md, devstore-query-contract.md, agents/, adr/
+schemas/         genealogger-context.jsonld — the normative JSON-LD context
+nv/index.html    the nv: namespace URL, rendered from the context file
+GLOSSARY.md      domain vocabulary; issues, tests and docs use these words
 tests/unit       Vitest
 tests/e2e        Playwright journeys on ?store=local
 tests/live       opt-in devstore smoke
