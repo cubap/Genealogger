@@ -60,6 +60,16 @@ birth.html            static HTML: form fields keep their deer-key names
    the new shape. No batch migration step.
 8. **Never store `nv:hasChild`.** Compute it at read time with
    `search.childrenOf()`. Keep that invariant.
+9. **Reverse lookups need a `rel` index, not a body query.** devstore cannot
+   filter any path containing a `.` — which is every property URI — so
+   "find annotations about X from X's side" only works through the top-level
+   `rel` array (`assert({ rel })`, `participate()`, `deriveParentAssertions()`
+   all write it). Anything with no `target` and no `rel` throws in
+   `RerumStore.query()` rather than scanning. See
+   [devstore-query-contract.md](devstore-query-contract.md).
+10. **Roles are canonical URIs.** Map form tokens through `ROLE_TOKENS` /
+    `CANONICAL_ROLES` (`nv#mother`, `nv#father`, …); a bare `"mother"` string is
+    unfindable and `deriveParentAssertions()` skips it.
 
 ## Testing pattern
 

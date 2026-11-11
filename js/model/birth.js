@@ -49,6 +49,8 @@ export const PROPERTY_LABELS = {
 export const ROLE_TOKENS = {
     child: NV.child,
     parent: NV.parent,
+    mother: NV.mother,
+    father: NV.father,
     godparent: NV.godParent,
     informant: NV.informant
 }

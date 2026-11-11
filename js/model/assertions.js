@@ -55,10 +55,14 @@ export function valueObject(value, { source, evidence, confidence } = {}) {
  * @param {number} [options.confidence] nv:confidence 0-1
  * @param {string} [options.motivation] OA motivation
  * @param {string} [options.creator] attributing agent
+ * @param {string|Array<string>} [options.rel] reverse-index ids (see
+ * adapters/store~QueryFilter.rel). Required whenever the asserted VALUE is an
+ * entity id that other pages must find from the value's side — e.g. a parent
+ * id, so the parent's page can list its children.
  * @returns {Promise<Object>} the stored Annotation
  */
 export async function assert(options = {}) {
-    const { store = getDefaultStore(), target, property, value, source, evidence, confidence, motivation, creator } = options
+    const { store = getDefaultStore(), target, property, value, source, evidence, confidence, motivation, creator, rel } = options
     if (!target) throw new TypeError('assert() requires a target id')
     if (!property) throw new TypeError('assert() requires a property URI')
     const vo = valueObject(value, { source, evidence, confidence })
@@ -69,6 +73,7 @@ export async function assert(options = {}) {
     }
     if (motivation) annotation.motivation = motivation
     if (creator) annotation.creator = creator
+    if (rel !== undefined) annotation.rel = Array.isArray(rel) ? rel : [rel]
     if (evidence) annotation['http://purl.org/dc/terms/source'] = evidence
     return await store.create(annotation)
 }
