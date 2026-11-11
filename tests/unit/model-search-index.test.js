@@ -60,6 +60,13 @@ describe('deriveLabel', () => {
         expect(deriveLabel(person('ada', { label: 'Ada Gordon' }))).toBe('Ada Gordon')
     })
 
+    test('reads the expanded schema.org name key a JSON-LD store may hand back', () => {
+        expect(deriveLabel(person('ada', { [SCHEMA.name]: 'Ada Byron' }))).toBe('Ada Byron')
+        // The bare label still wins: it is what a previous write decided to call this person.
+        expect(deriveLabel(person('ada', { label: 'Ada Gordon', [SCHEMA.name]: 'Ada Byron' })))
+            .toBe('Ada Gordon')
+    })
+
     test('falls back to name when no label is present', () => {
         expect(deriveLabel(person('ada', { name: 'Ada Byron' }))).toBe('Ada Byron')
     })
