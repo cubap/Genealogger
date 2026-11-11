@@ -7,6 +7,7 @@
  */
 
 import { createMemoryStore } from '../adapters/memory-store.js'
+import { assertStore } from '../adapters/store.js'
 
 let defaultStore = null
 
@@ -17,6 +18,17 @@ export function getDefaultStore() {
     if (!defaultStore) {
         defaultStore = createMemoryStore()
     }
+    return defaultStore
+}
+
+/**
+ * Install a Store (e.g. the RERUM or localStorage adapter a page resolved) as
+ * the model layer's default, so model calls need no per-call store argument.
+ * @param {Object} store a Store implementing the contract
+ * @returns {Object} the installed store
+ */
+export function setDefaultStore(store) {
+    defaultStore = assertStore(store)
     return defaultStore
 }
 
