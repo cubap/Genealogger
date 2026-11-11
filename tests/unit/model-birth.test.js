@@ -167,4 +167,29 @@ describe('loadBirth', () => {
         const birth = await loadBirth({ store, personId: 'https://example.org/nope' })
         expect(birth).toBeNull()
     })
+
+    test('names parents whose identity has no bare `label` and falls back to the id when nothing is displayable', async () => {
+        const store = createMemoryStore()
+        // Same shared label rule (#31) as the death page: a DEER v1 person may
+        // carry only givenName/familyName, which `entity.label` alone missed.
+        const mother = 'https://example.org/mother'
+        await store.create({ '@id': mother, '@type': 'Person', givenName: 'Ada', familyName: 'Gordon' })
+        const father = 'https://example.org/father'
+        await store.create({ '@id': father, '@type': 'Person' })
+
+        const saved = await saveBirth({
+            store,
+            name: { given: 'Born', family: 'Probe' },
+            evidence: { title: 'Parish register' },
+            participants: [
+                { role: 'mother', agentId: mother },
+                { role: 'father', agentId: father }
+            ]
+        })
+
+        const birth = await loadBirth({ store, personId: saved.personId })
+        expect(birth.personLabels[mother]).toBe('Ada Gordon')
+        // A form row must stay selectable, so the id replaces `[ unlabeled ]`.
+        expect(birth.personLabels[father]).toBe(father)
+    })
 })
