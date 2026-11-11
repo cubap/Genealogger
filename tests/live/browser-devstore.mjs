@@ -7,10 +7,15 @@
 //
 //     node tests/live/browser-devstore.mjs
 //
-// It writes two stamped records (devstore is the sandbox; the node smoke already
+// It writes stamped records (devstore is the sandbox; the node smoke already
 // does this) and then drives the pages with EVERY write request aborted at the
 // network layer, so the browser leg cannot mutate the store even if a page
 // regressed into saving on load. Records are left behind, like the node smoke's.
+//
+// Pages covered: index (list), birth, death, person (hub), parents, tree.
+// Add a leg here when a page lands — it is the only proof that a page reads real
+// devstore data, and it has already caught two browser-only adapter defects that
+// no injected-fake test could see.
 //
 // Exits non-zero on the first broken expectation. If this fails but
 // smoke-devstore.mjs passes, the defect is in the page/component layer or in how
@@ -25,6 +30,7 @@ import { createRerumStore } from '../../js/adapters/rerum-store.js'
 import { setDefaultStore } from '../../js/model/default-store.js'
 import { saveBirth } from '../../js/model/birth.js'
 import { saveDeath } from '../../js/model/death.js'
+import { saveParents } from '../../js/model/parents.js'
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const stamp = new Date().toISOString()
@@ -81,6 +87,16 @@ const death = await saveDeath({
     participants: [{ role: 'witness', name: { given: 'John', family: 'Halo' } }]
 })
 console.log(`  birth person ${birth.personId}\n  death person ${death.personId}`)
+
+// Link the two probes into a family, so the pages that read relationships
+// (person, parents, tree) are exercised against real cross-document data rather
+// than a lonely person with nothing to point at.
+const parentage = await saveParents({
+    personId: death.personId,
+    parents: [{ role: 'mother', agentId: birth.personId }],
+    evidence: { title: `browser smoke certificate ${stamp}`, confidence: 0.85 }
+})
+console.log(`  parentage event ${parentage.eventId}`)
 
 const server = await serve()
 const origin = `http://127.0.0.1:${server.address().port}`
@@ -166,6 +182,46 @@ try {
     check('birthDate renders into the form',
         (await inputValue('input[deer-key="birthDate"]')) === '1898-05-05', await inputValue('input[deer-key="birthDate"]'))
     check('the birth page resolved its assertions', (await page.locator('#existingBirth gl-assertion').count()) >= 1)
+
+    console.log('\nperson.html?store=rerum (the hub: one label rule, relations)')
+    check('the person page loads', (await open(`${origin}/person.html?person=${encodeURIComponent(death.personId)}&store=rerum`)) === 200)
+    await settle(() => !document.getElementById('personBanner').classList.contains('hidden'))
+    const hubBanner = await text('#personBanner')
+    // personLabel() is the one rule (#31); a bare id or UNLABELED here means the
+    // hub grew a second label path again.
+    check('the hub labels the person by rule, not by id', hubBanner.trim() === 'Died Probe', hubBanner)
+    check('the hub shows no legacy warning for a new-shape record', !/legacy/i.test(hubBanner), hubBanner)
+    check('the hub resolved assertions into rows', (await page.locator('#existingAssertions gl-assertion').count()) >= 2)
+    const relations = await text('#existingRelations')
+    check('the derived parent link is visible on the hub', /Parent: Browser Probe/.test(relations), relations)
+
+    console.log('\nparents.html?store=rerum (parentage derived from an event)')
+    check('the parents page loads', (await open(`${origin}/parents.html?person=${encodeURIComponent(death.personId)}&store=rerum`)) === 200)
+    await settle(() => !document.getElementById('personBanner').classList.contains('hidden'))
+    const parentsBanner = await text('#personBanner')
+    check('the banner names the child', /^Parents of Died Probe/.test(parentsBanner), parentsBanner)
+    check('the record reads as new-shape, not legacy', !/DEER v1/.test(parentsBanner), parentsBanner)
+    const parentRows = await page.$$eval('#existingParents gl-assertion',
+        els => els.map(el => ({ value: el.row && el.row.value, evidence: el.row && el.row.evidenceLabel })))
+    check('the mother claim is a row naming its evidence document',
+        parentRows.some(row => row.value === 'Browser Probe' && String(row.evidence).includes(`browser smoke certificate ${stamp}`)),
+        JSON.stringify(parentRows))
+    check('the birth-family event lists participants by role',
+        /mother: Browser Probe/.test(await text('#existingEvents')), await text('#existingEvents'))
+
+    console.log('\ntree.html?store=rerum (edges derived from events)')
+    check('the tree page loads', (await open(`${origin}/tree.html?person=${encodeURIComponent(death.personId)}&store=rerum&generations=2`)) === 200)
+    await settle(() => !document.getElementById('personBanner').classList.contains('hidden'))
+    const treeBanner = await text('#personBanner')
+    check('the banner counts the real people in scope', /Died Probe — 2 people within 2 generations/.test(treeBanner), treeBanner)
+    // gl-tree-view renders into a shadow root; Playwright's CSS engine pierces it.
+    const nodeIds = await page.$$eval('gl-tree-view g[data-person-id]',
+        els => els.map(el => el.getAttribute('data-person-id')))
+    check('both family members are drawn as nodes',
+        nodeIds.includes(death.personId) && nodeIds.includes(birth.personId), nodeIds)
+    // SVG <text> has no innerText; read the rendered label text directly.
+    const edgeLabels = await page.$$eval('gl-tree-view text.edge-label', els => els.map(el => el.textContent))
+    check('the edge is labelled with its role', edgeLabels.some(label => /mother/i.test(label)), edgeLabels)
 
     console.log('\nthe network layer')
     check('the pages really queried devstore', queries > 0, queries)
