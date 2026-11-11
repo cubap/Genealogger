@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nv: — Genealogger Eventities vocabulary</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="alternate" type="application/ld+json" href="../schemas/genealogger-context.jsonld">
+<link rel="stylesheet" href="../css/site.css">
+<style>
+    body { max-width: 60rem; margin: 3rem auto; padding: 0 1.5rem; }
+    .term { color: var(--muted, #666); }
+    nav a { margin-right: 1rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid #ddd; vertical-align: top; }
+</style>
+</head>
+<body>
+<h1><code>https://cubap.github.io/Genealogger/nv#</code></h1>
+
+<p>
+    The <strong>nv:</strong> namespace holds the Eventities-specific terms of the
+    Genealogger model — event subtypes, participation roles, confidence, lacunae,
+    and the derived parent/child links. Everything else reuses a standard
+    vocabulary: <a href="https://schema.org/">schema.org</a> for facts about
+    people, <a href="http://www.w3.org/ns/oa">Web Annotation</a> for assertions,
+    <a href="http://purl.org/dc/terms/">DCTERMS</a> for records and dates,
+    <a href="https://www.w3.org/TR/prov-o/">PROV-O</a>,
+    <a href="https://www.w3.org/2003/01/geo/">WGS84</a> and
+    <a href="https://www.w3.org/TR/owl-time/">OWL Time</a> for places and dates.
+</p>
+
+<p>
+    The normative machine-readable definition is
+    <a href="../schemas/genealogger-context.jsonld"><code>schemas/genealogger-context.jsonld</code></a>.
+    The words it uses are fixed by <a href="../GLOSSARY.md">GLOSSARY.md</a>.
+</p>
+
+<h2>Prefixes</h2>
+<table id="prefixes"><tbody></tbody></table>
+
+<h2>Terms</h2>
+<p class="term">Rendered from the context file, so this page cannot drift from it.</p>
+<table id="terms">
+    <thead><tr><th>Term</th><th>Expands to</th><th>Meaning</th></tr></thead>
+    <tbody></tbody>
+</table>
+
+<nav>
+    <a href="../">the app</a>
+    <a href="../schemas/genealogger-context.jsonld">context (JSON-LD)</a>
+    <a href="../GLOSSARY.md">glossary</a>
+</nav>
+
+<script>
+const SRC = '../schemas/genealogger-context.jsonld'
+fetch(SRC)
+    .then((r) => {
+        if (!r.ok) throw new Error(r.status)
+        return r.json()
+    })
+    .then(({ '@context': ctx }) => {
+        const prefixes = Object.entries(ctx).filter(([, v]) => typeof v === 'string')
+        const expand = (id) => {
+            if (!id.includes(':') || id.startsWith('http')) return id
+            const [p, ...rest] = id.split(':')
+            return ctx[p] + rest.join(':')
+        }
+        document.querySelector('#prefixes tbody').innerHTML = prefixes
+            .map(([p, iri]) => `<tr><td><code>${p}:</code></td><td><code>${iri}</code></td></tr>`)
+            .join('')
+        document.querySelector('#terms tbody').innerHTML = Object.entries(ctx)
+            .filter(([, v]) => v && typeof v === 'object')
+            .map(([key, def]) => `<tr>
+                <td><code>${key}</code><div class="term">${def['rdfs:label'] ?? ''}</div></td>
+                <td><code>${expand(def['@id'])}</code></td>
+                <td>${def['rdfs:comment'] ?? ''}</td>
+            </tr>`)
+            .join('')
+    })
+    .catch((err) => {
+        document.querySelector('#terms tbody').innerHTML =
+            `<tr><td colspan="3">Could not load the context (${err.message}); open
+             <a href="${SRC}">the file</a> directly.</td></tr>`
+    })
+</script>
+</body>
+</html>

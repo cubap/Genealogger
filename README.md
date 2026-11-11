@@ -110,6 +110,10 @@ Genealogger/
 │       ├── fixture-store.js  #   demo family
 │       └── legacy.js         #   read-only DEER v1 shape conversion
 ├── docs/                     # page-model-adapter.md, devstore-query-contract.md, adr/
+├── schemas/
+│   └── genealogger-context.jsonld  # normative JSON-LD context for nv: + reuse
+├── nv/index.html             # the nv: namespace URL, rendered from the context
+├── GLOSSARY.md               # the words this repo agrees to use
 ├── tests/
 │   ├── unit/                 # Vitest
 │   ├── e2e/                  # Playwright journeys
@@ -134,7 +138,10 @@ Production RERUM is a second base-URI pair in `js/model/config.js`; no caller ch
 
 ### Data format
 
-JSON-LD entities with Web Annotation assertions. One family, as stored:
+JSON-LD entities with Web Annotation assertions. The terms are defined
+normatively in [`schemas/genealogger-context.jsonld`](schemas/genealogger-context.jsonld),
+rendered at [the `nv:` namespace URL](https://cubap.github.io/Genealogger/nv), and
+named in [GLOSSARY.md](GLOSSARY.md). One family, as stored:
 
 ```json
 { "@id": "…/id/ada", "@type": "Person", "label": "Ada Gordon" }

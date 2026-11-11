@@ -1,0 +1,165 @@
+{
+    "@context": {
+        "nv": "https://cubap.github.io/Genealogger/nv#",
+        "schema": "https://schema.org/",
+        "dcterms": "http://purl.org/dc/terms/",
+        "oa": "http://www.w3.org/ns/oa#",
+        "prov": "http://www.w3.org/ns/prov#",
+        "geo": "http://www.w3.org/2003/01/geo/wgs84_pos#",
+        "time": "http://www.w3.org/2006/time#",
+        "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+        "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+        "xsd": "http://www.w3.org/2001/XMLSchema#",
+
+        "Person": {
+            "@id": "schema:Person",
+            "@type": "@vocab",
+            "rdfs:comment": "A bare human identity. Only identity and the `label` cache live on the document; every fact about a Person is an Annotation targeting it.",
+            "rdfs:label": "Person"
+        },
+        "Event": {
+            "@id": "nv:Event",
+            "@type": "@vocab",
+            "rdfs:comment": "Something that happened to someone. A Person's relationships and vital facts are discovered through the Events they participate in, so `@type` is an array: [\"Event\", one of the nv: subtypes below].",
+            "rdfs:label": "Event"
+        },
+        "Record": {
+            "@id": "dcterms:BibliographicResource",
+            "@type": "@vocab",
+            "rdfs:comment": "A source document (certificate, census return, bible record). A Record is what assertions cite as `evidence`; it carries a citation, not genealogical facts.",
+            "rdfs:label": "Record"
+        },
+        "Place": {
+            "@id": "geo:Place",
+            "@type": "@vocab",
+            "rdfs:comment": "A location referenced by an event or a place-valued assertion, coordinate-capable via geo:lat/geo:long.",
+            "rdfs:label": "Place"
+        },
+        "Annotation": {
+            "@id": "oa:Annotation",
+            "@type": "@vocab",
+            "rdfs:comment": "An assertion: one document targeting one entity, whose body holds property-keyed ValueObjects. `Annotation` is the OA class the model writes into `@type`.",
+            "rdfs:label": "Assertion"
+        },
+
+        "Birth": { "@id": "nv:Birth", "rdfs:comment": "Event subtype: a birth.", "rdfs:label": "Birth" },
+        "Christening": { "@id": "nv:Christening", "rdfs:comment": "Event subtype: a christening.", "rdfs:label": "Christening" },
+        "Baptism": { "@id": "nv:Baptism", "rdfs:comment": "Event subtype: a baptism.", "rdfs:label": "Baptism" },
+        "Death": { "@id": "nv:Death", "rdfs:comment": "Event subtype: a death.", "rdfs:label": "Death" },
+        "Burial": { "@id": "nv:Burial", "rdfs:comment": "Event subtype: a burial.", "rdfs:label": "Burial" },
+        "Marriage": { "@id": "nv:Marriage", "rdfs:comment": "Event subtype: a marriage.", "rdfs:label": "Marriage" },
+        "Census": { "@id": "nv:Census", "rdfs:comment": "Event subtype: a census enumeration.", "rdfs:label": "Census" },
+
+        "participant": {
+            "@id": "nv:participant",
+            "@type": "@id",
+            "rdfs:comment": "On an event annotation, the Person taking part. Paired with `role` in the same body, following the W3C Property-of-a-Role pattern.",
+            "rdfs:label": "participant"
+        },
+        "role": {
+            "@id": "nv:role",
+            "@type": "@vocab",
+            "rdfs:comment": "The capacity in which the participant took part. Written as a bare token (child, parent, ...) that expands through these terms to its nv: URI.",
+            "rdfs:label": "role"
+        },
+        "child": { "@id": "nv:child", "rdfs:comment": "Role: the person the event is chiefly about.", "rdfs:label": "child" },
+        "parent": { "@id": "nv:parent", "rdfs:comment": "Role: a parent, unspecified as to mother or father.", "rdfs:label": "parent" },
+        "mother": { "@id": "nv:mother", "rdfs:comment": "Role: the mother.", "rdfs:label": "mother" },
+        "father": { "@id": "nv:father", "rdfs:comment": "Role: the father.", "rdfs:label": "father" },
+        "godParent": { "@id": "nv:godParent", "rdfs:comment": "Role: a godparent or sponsor.", "rdfs:label": "godParent" },
+        "informant": { "@id": "nv:informant", "rdfs:comment": "Role: whoever supplied the details that produced the record.", "rdfs:label": "informant" },
+        "witness": { "@id": "nv:witness", "rdfs:comment": "Role: a witness to the event.", "rdfs:label": "witness" },
+        "attendant": { "@id": "nv:attendant", "rdfs:comment": "Role: present at the event without witnessing it.", "rdfs:label": "attendant" },
+
+        "hasParent": {
+            "@id": "nv:hasParent",
+            "@type": "@id",
+            "rdfs:comment": "A parent derived from that parent's participation in this person's birth event. Derived, never written.",
+            "rdfs:label": "hasParent"
+        },
+        "hasChild": {
+            "@id": "nv:hasChild",
+            "@type": "@id",
+            "rdfs:comment": "A child derived from this person's participation in that child's birth event. Derived, never written.",
+            "rdfs:label": "hasChild"
+        },
+
+        "value": {
+            "@id": "rdf:value",
+            "rdfs:comment": "The asserted value inside a ValueObject. ValueObject qualifiers (value, evidence, source, about) are written as compact keys by the model; the fact's property key is always a full URI.",
+            "rdfs:label": "value"
+        },
+        "confidence": {
+            "@id": "nv:confidence",
+            "@type": "xsd:decimal",
+            "rdfs:comment": "How much the claim is trusted, 0-1, asserted inside the ValueObject so each competing claim keeps its own.",
+            "rdfs:label": "confidence"
+        },
+        "evidence": {
+            "@id": "nv:evidence",
+            "@type": "@id",
+            "rdfs:comment": "The Record that says so. Absent evidence is itself information: the claim is unsourced.",
+            "rdfs:label": "evidence"
+        },
+        "Lacuna": {
+            "@id": "nv:Lacuna",
+            "rdfs:comment": "An annotation marking an expected-but-unrecorded slot (\"birth mother unknown\"), separating \"nobody looked\" from \"nothing there\".",
+            "rdfs:label": "Lacuna"
+        },
+        "about": {
+            "@id": "nv:about",
+            "@type": "@id",
+            "rdfs:comment": "On a Lacuna, the property URI of the empty slot, so the gap can be reconciled later.",
+            "rdfs:label": "about"
+        },
+
+        "nameType": {
+            "@id": "nv:nameType",
+            "@type": "@vocab",
+            "rdfs:comment": "What kind of name a name assertion is. Written as a bare token from NAME_TYPE_TOKENS (birth name, married name, nickname, ...).",
+            "rdfs:label": "nameType"
+        },
+        "activeFrom": {
+            "@id": "nv:activeFrom",
+            "@type": "xsd:date",
+            "rdfs:comment": "Start of the period in which a name was in use, asserted inside the ValueObject.",
+            "rdfs:label": "activeFrom"
+        },
+        "activeTo": {
+            "@id": "nv:activeTo",
+            "@type": "xsd:date",
+            "rdfs:comment": "End of the period in which a name was in use, asserted inside the ValueObject.",
+            "rdfs:label": "activeTo"
+        },
+
+        "rel": {
+            "@id": "nv:rel",
+            "@type": "@id",
+            "rdfs:comment": "Non-authoritative reverse index ([agent, event]) so a store that cannot filter dotted body properties can still answer 'which events involve this person'. Never read as fact; the body is the record.",
+            "rdfs:label": "rel"
+        },
+        "target": { "@id": "oa:hasTarget", "@type": "@id", "rdfs:comment": "The entity an annotation asserts about.", "rdfs:label": "target" },
+        "body": { "@id": "oa:hasBody", "rdfs:comment": "A single property-keyed map of ValueObjects: { \"<propertyURI>\": { \"value\": ... } }.", "rdfs:label": "body" },
+        "motivation": { "@id": "oa:motivatedBy", "rdfs:comment": "Why the annotation exists (property-assertion, documenting, ...).", "rdfs:label": "motivation" },
+        "creator": { "@id": "dcterms:creator", "@type": "@id", "rdfs:comment": "Who made the claim, when attribution is recorded.", "rdfs:label": "creator" },
+        "source": { "@id": "dcterms:source", "rdfs:comment": "Citation metadata for the value, e.g. { \"citationSource\": \"Parish register, 1815\" }.", "rdfs:label": "source" },
+        "created": { "@id": "dcterms:created", "@type": "xsd:date", "rdfs:comment": "When the document was written.", "rdfs:label": "created" },
+        "modified": { "@id": "dcterms:modified", "@type": "xsd:date", "rdfs:comment": "When the document was last changed.", "rdfs:label": "modified" },
+        "wasDerivedFrom": { "@id": "prov:wasDerivedFrom", "@type": "@id", "rdfs:comment": "The source a value was derived from.", "rdfs:label": "wasDerivedFrom" },
+        "wasAttributedTo": { "@id": "prov:wasAttributedTo", "@type": "@id", "rdfs:comment": "The agent a claim is attributed to.", "rdfs:label": "wasAttributedTo" },
+
+        "name": { "@id": "schema:name", "rdfs:comment": "A full display name. Standard schema.org term; asserted, never stored bare.", "rdfs:label": "name" },
+        "givenName": { "@id": "schema:givenName", "rdfs:comment": "The forename part of a name assertion.", "rdfs:label": "givenName" },
+        "familyName": { "@id": "schema:familyName", "rdfs:comment": "The surname part of a name assertion.", "rdfs:label": "familyName" },
+        "additionalName": { "@id": "schema:additionalName", "rdfs:comment": "A middle or additional name part.", "rdfs:label": "additionalName" },
+        "alternateName": { "@id": "schema:alternateName", "rdfs:comment": "A variant form of a name.", "rdfs:label": "alternateName" },
+        "birthDate": { "@id": "schema:birthDate", "@type": "xsd:date", "rdfs:comment": "Date of birth, asserted about a Person; the birth Event is where it is sourced.", "rdfs:label": "birthDate" },
+        "birthPlace": { "@id": "schema:birthPlace", "rdfs:comment": "Place of birth, asserted about a Person.", "rdfs:label": "birthPlace" },
+        "deathDate": { "@id": "schema:deathDate", "@type": "xsd:date", "rdfs:comment": "Date of death, asserted about a Person; the death Event is where it is sourced.", "rdfs:label": "deathDate" },
+        "deathPlace": { "@id": "schema:deathPlace", "rdfs:comment": "Place of death, asserted about a Person.", "rdfs:label": "deathPlace" },
+        "sex": { "@id": "schema:sex", "rdfs:comment": "Recorded sex as stated by a source; distinct from gender.", "rdfs:label": "sex" },
+        "gender": { "@id": "schema:gender", "rdfs:comment": "Gender as stated by a source or asserted by a researcher.", "rdfs:label": "gender" },
+        "homeLocation": { "@id": "schema:homeLocation", "rdfs:comment": "A residence claim; place-valued facts may be bare strings or reference a Place.", "rdfs:label": "homeLocation" },
+        "label": { "@id": "rdfs:label", "rdfs:comment": "The single denormalized property allowed on an entity document: a cache of the best evidenced name. Derived from assertions, never authoritative over them.", "rdfs:label": "label" }
+    }
+}

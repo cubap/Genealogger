@@ -70,7 +70,10 @@ Genealogger/
 │   ├── components/       # gl-* custom elements (forms, views, pickers) — no network access
 │   ├── model/            # The eventities domain: entities, assertions, events, search, labels
 │   └── adapters/         # Store contract + implementations (rerum, local, memory, fixture) and the legacy reader
-├── docs/                 # page-model-adapter.md, devstore-query-contract.md, agents/
+├── docs/                 # page-model-adapter.md, devstore-query-contract.md, agents/, adr/
+├── schemas/              # genealogger-context.jsonld — the normative JSON-LD context
+├── nv/                   # index.html: the nv: namespace URL, rendered from the context
+├── GLOSSARY.md           # the domain vocabulary this repo agrees to use
 ├── tests/
 │   ├── unit/             # Vitest, model + component surface
 │   ├── e2e/              # Playwright journeys against ?store=local
@@ -83,6 +86,20 @@ Genealogger/
 `fetch` or import an adapter directly; every read and write goes through `js/model/*`, which receives
 the store from `js/adapters/store-bootstrap.js`. That is what makes the whole app testable against the
 memory store and portable off devstore. See `docs/page-model-adapter.md`.
+
+### Vocabulary
+
+A genealogical term is defined in three places, and they are checked against each other:
+
+1. `js/model/vocabulary.js` — the URI the code writes.
+2. `schemas/genealogger-context.jsonld` — the normative public context: an entry with
+   `@id`, `rdfs:label` and `rdfs:comment`. `nv:` is reserved for Eventities-specific
+   concepts; reuse schema.org / DCTERMS / OA / PROV / geo / time wherever one exists.
+3. `GLOSSARY.md` — the word humans use for it, in prose and issue titles.
+
+`tests/unit/schemas-context.test.js` fails if the context stops covering the code, so a
+new term that only lands in the code breaks the build rather than drifting silently. The
+`nv:` namespace URL (`nv/index.html`) renders from the context file, so it cannot lie.
 
 ### Web Components
 
