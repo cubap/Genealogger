@@ -69,15 +69,40 @@ reproduces these constraints.
 - **Name typeahead cannot be a body query.** Either write a dot-free top-level
   index field (the `rel` trick, e.g. `sortKey`) or fetch a bounded set and
   filter client-side. Do not build it on `body.<uri>`.
-- **Legacy docs have no `rel`.** Reverse lookups over migrated devstore content
-  are impossible live; legacy events are reachable via the person's own
-  `#legacy-*` fan-out annotations, which *are* target queries.
+- **Legacy docs have no `rel`, and no reader-side migration can give them one.**
+  `query({ rel })` asks the *server* about a field those documents predate; the
+  v1 -> v2 conversion happens after the fetch, so it cannot influence the
+  filter. Reverse lookups over v1 data therefore use the bounded enumeration in
+  `search.js` (`eventsForPerson({ legacyTypes })` -> `eventsWithoutIndex()`):
+  list the candidate event types, then confirm each candidate with a `target`
+  query, which *is* indexed. It is opt-in precisely so a new-shape read can
+  never pay for a scan. Note that the v1 corpus actually sitting in devstore
+  (the 2023 `mm-prototype` demo events) links events to nobody at all, so the
+  scan legitimately finds nothing there — do not treat an empty result as proof
+  the fallback is broken; the live smoke script says which case you are in.
+- **A `@type` is spelled differently by each generation.** Verified live:
+  a DEER v1 event is stored as `'@type': "Birth"` (scalar, bare local name)
+  while a new-shape event is `'@type': ["Event", "…/nv#Birth"]` (array, subtype
+  as a URI). `Persons` are the scalar bare `"Person"` in *both* generations.
+  Since a filter matches a whole array too (`$all`), one token can only ever see
+  one generation: `vocabulary.js#typeTokens()` returns both spellings and
+  `search.js` queries each. Adding a URI token for `Person` buys nothing and
+  costs a request.
+- **`/query` returns at most 10 documents and offers no paging.** `limit`,
+  `$limit` and `$skip` are all rejected or ignored. So every `listByType()`
+  result is a **floor**, not a total: the index page cannot list an 11th person,
+  and a legacy scan samples 10 events per type. This is the binding constraint
+  on real data and the reason the app still needs a scoped collection query
+  (unmodelled so far) or a migration into a store that pages.
 - **Test fakes must reproduce the server**: server-minted ids, `__rerum`
   stamping on every document, and failing dotted paths. Two of the four defects
   fixed in the `rel` PR were invisible because the old fake was more generous
   than devstore.
 - **One live smoke script is worth several unit tests.** Run
   `node tests/live/smoke-devstore.mjs` before believing a slice that touched the
-  adapter; it writes a throwaway person to devstore and asserts the full
-  birth round trip (rel lookup, canonical roles, derived `nv:hasParent`,
-  per-field confidence, evidence labels).
+  adapter; it writes a throwaway person to devstore, asserts the full birth
+  round trip (rel lookup, canonical roles, derived `nv:hasParent`, per-field
+  confidence, evidence labels), then makes a read-only pass over the real DEER
+  v1 documents to prove the two-generation `@type` spelling and that the bounded
+  scan neither throws nor escapes its bounds. Every fact on this page came from
+  that script or a throwaway probe like it.
