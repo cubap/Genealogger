@@ -233,6 +233,54 @@ describe('loadDeath legacy (DEER v1) reading', () => {
         expect(dates[0].evidence).toBe(saved.eventId)
     })
 
+    test('the legacy fallback never returns somebody else\'s death', async () => {
+        const store = createMemoryStore()
+        const ada = await createPerson({ store, label: 'Ada Byron' })
+        const { eventId } = await seedLegacy(store, ada['@id'])
+        const halo = await createPerson({ store, label: 'John Halo' })
+        const haloDeath = `${eventId}-halo`
+        await store.create({ '@id': haloDeath, '@type': 'Death', label: 'Death of John Halo' })
+        await store.create({
+            '@id': `${haloDeath}#legacy-agent-0`,
+            type: 'Annotation',
+            target: haloDeath,
+            body: { [NV.participant]: { value: halo['@id'] }, [NV.role]: { value: NV.child } }
+        })
+
+        const death = await loadDeath({ store, personId: halo['@id'] })
+        expect(death.events.map(row => row.event['@id'])).toEqual([haloDeath])
+    })
+
+    test('a legacy witness is not treated as the deceased', async () => {
+        const store = createMemoryStore()
+        const ada = await createPerson({ store, label: 'Ada Byron' })
+        const witness = await createPerson({ store, label: 'John Halo' })
+        const { eventId } = await seedLegacy(store, ada['@id'])
+        await store.create({
+            '@id': `${eventId}#legacy-agent-1`,
+            type: 'Annotation',
+            target: eventId,
+            body: { [NV.participant]: { value: witness['@id'] }, [NV.role]: { value: ROLE_TOKENS.witness } }
+        })
+
+        const death = await loadDeath({ store, personId: witness['@id'] })
+        expect(death.events).toHaveLength(0)
+    })
+
+    test('new-shape records are found through the rel index without scanning types', async () => {
+        const store = createMemoryStore()
+        const saved = await saveDeath({
+            store,
+            name: { given: 'Ada', family: 'Byron' },
+            evidence: { title: 'Death certificate' },
+            deathDate: '1852-01-01'
+        })
+        const scan = vi.spyOn(store, 'listByType')
+        const death = await loadDeath({ store, personId: saved.personId })
+        expect(death.events).toHaveLength(1)
+        expect(scan).not.toHaveBeenCalled()
+    })
+
     test('returns null for an unknown id', async () => {
         const store = createMemoryStore()
         const death = await loadDeath({ store, personId: 'https://example.org/nope' })

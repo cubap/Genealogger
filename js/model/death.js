@@ -22,7 +22,10 @@
  * (`deer-type="Death"` with `deer-key="deathDate"`), so the legacy reader asserts
  * deathDate/deathPlace against the event rather than the person. loadDeath()
  * back-fills those two properties from the event when the person carries none,
- * which keeps records already in devstore readable (user story 16).
+ * which keeps records already in devstore readable (user story 16). Those
+ * documents also predate the top-level `rel` index the store contract now
+ * requires for a person -> events lookup, so loadDeath() falls back to
+ * enumerating death-typed events (legacySubjectEvents) when the index is empty.
  */
 
 import { NV, SCHEMA, TYPES, EVENT_SUBTYPES, term } from './vocabulary.js'
@@ -116,6 +119,37 @@ function isDeathEvent(event) {
 
 function isLegacyAnnotation(anno) {
     return typeof anno['@id'] === 'string' && anno['@id'].includes(LEGACY_ID_MARKER)
+}
+
+/**
+ * A v1 death document links the deceased from the Event's own body (`hasAgent`),
+ * and the legacy reader mints no top-level `rel`, so the rel-indexed
+ * eventsForPerson() lookup cannot see those records (docs/devstore-query-contract.md).
+ * Enumerate the death-typed events instead and keep the ones this person is the
+ * subject of: `listByType()` plus per-event `target` queries are the two shapes
+ * devstore can answer, and it is the same bounded pattern
+ * model/search.personsByAnnotationType() uses. Only reached when the index
+ * lookup finds nothing, so new-shape reads stay single-query.
+ * @param {Object} params
+ * @param {Object} params.store
+ * @param {string} params.personId
+ * @returns {Promise<Array<Object>>} death-family event documents
+ */
+async function legacySubjectEvents({ store, personId }) {
+    const tokens = ['Death', 'Burial', EVENT_SUBTYPES.Death, EVENT_SUBTYPES.Burial]
+    const found = []
+    for (const token of tokens) {
+        const candidates = await store.listByType(token)
+        for (const event of candidates) {
+            if (!event || !event['@id'] || !isDeathEvent(event)) continue
+            if (found.some(other => other['@id'] === event['@id'])) continue
+            const rows = await participations({ store, event })
+            if (rows.some(row => row.agent === personId && row.role === NV.child)) {
+                found.push(event)
+            }
+        }
+    }
+    return found
 }
 
 async function resolveLabels(store, ids) {
@@ -243,7 +277,12 @@ export async function loadDeath(options = {}) {
     const evidenceIds = []
     const personIds = []
 
-    const subjectEvents = await eventsForPerson({ store, personId, role: NV.child })
+    let subjectEvents = await eventsForPerson({ store, personId, role: NV.child })
+    if (!subjectEvents.length) {
+        // v1 migrations (and any document written before the rel index existed)
+        // are reachable only by enumerating the events themselves.
+        subjectEvents = await legacySubjectEvents({ store, personId })
+    }
     for (const event of subjectEvents.filter(isDeathEvent)) {
         const provenance = await eventProvenance({ store, event })
         if (provenance.evidence) evidenceIds.push(provenance.evidence)
