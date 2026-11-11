@@ -35,11 +35,21 @@
  * @property {string} [motivation] OA motivation, e.g. 'describing'
  * @property {string} [creator] attributing agent
  * @property {string} [dctermsSource] provenance: id of the evidence document
+ * @property {Array<string>} [rel] REVERSE INDEX: ids this annotation relates to
+ * besides its target. A participation targets the Event but is about a Person
+ * too, so `rel` carries the Person id and the query can run in the direction
+ * `target` cannot. Only dot-free top-level keys are filterable by devstore,
+ * which is why this is a plain `rel` array and not an `nv:`-URI property.
  *
  * @typedef {Object} QueryFilter
  * @property {string} [target] annotation target id
  * @property {string} [type] property URI that must key some annotation body
  * @property {*} [value] ValueObject value to match (compared with ===)
+ * @property {string} [rel] id carried by the annotation's top-level `rel`
+ * reverse index. Needed for the OTHER direction of a relation: a
+ * participation targets the Event, so "which events is this Person in?" cannot
+ * be answered by target. See module:adapters/rerum-store for why `rel` (a
+ * dot-free top-level array) is the only reverse lookup devstore can serve.
  *
  * @typedef {Object} Store
  * @property {function((BareEntity|Annotation)): (BareEntity|Annotation|Promise<BareEntity|Annotation>)} create
@@ -52,7 +62,7 @@
  * @property {function(string): (Array<BareEntity>|Promise<Array<BareEntity>>)} listByType
  * All entities whose '@type' equals or includes the given type.
  * @property {function(QueryFilter): (Array<Annotation>|Promise<Array<Annotation>>)} query
- * Annotations matching target/type/value filters (all provided filters must match).
+ * Annotations matching target/rel/type/value filters (all provided filters must match).
  * @property {function(): (Array<Object>|Promise<Array<Object>>)} [all]
  * Optional: every stored document (fixtures/debug helpers may use it).
  */
@@ -78,4 +88,17 @@ export function assertStore(candidate) {
         throw new TypeError(`store is missing required method(s): ${missing.join(', ')}`)
     }
     return candidate
+}
+
+/**
+ * The reverse-index ids an annotation carries (see Annotation.rel). Accepts a
+ * scalar, an array, or absence — legacy documents and unmigrated reads have no
+ * `rel`, and a missing index must mean "no reverse hits", never "match all".
+ * @param {Object} [doc]
+ * @returns {Array<string>}
+ */
+export function relOf(doc) {
+    const raw = doc && doc.rel
+    if (raw === undefined || raw === null) return []
+    return Array.isArray(raw) ? raw.map(String) : [String(raw)]
 }

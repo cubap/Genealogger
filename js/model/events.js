@@ -25,6 +25,9 @@ import { NV, TYPES, EVENT_SUBTYPES, DCTERMS } from './vocabulary.js'
 import { assert as assertAnnotation, valueObjectsFor } from './assertions.js'
 import { getDefaultStore } from './default-store.js'
 
+/** Roles on a participation that imply `nv:hasParent` for the other side. */
+const PARENT_ROLES = new Set([NV.parent, NV.mother, NV.father])
+
 /**
  * Resolve a subtype token ('Birth', 'nv:Birth' shorthand, or full URI).
  * @param {string} subtype
@@ -120,6 +123,13 @@ export async function participate(options = {}) {
     const annotation = {
         type: 'Annotation',
         target: eventId,
+        // Reverse index: the participation is ABOUT the event (target) but is
+        // equally about the agent, and "which events is <person> in?" is the
+        // question every person page asks first. devstore cannot filter body
+        // property URIs (dots in the path), so the agent id is repeated in the
+        // dot-free top-level `rel`. Read paths must not treat `rel` as
+        // authoritative — body[nv:participant] remains the record.
+        rel: [agent, eventId],
         body: {
             [NV.participant]: vo,
             [NV.role]: { value: role }
@@ -202,7 +212,9 @@ export async function deriveParentAssertions(options = {}) {
     if (!eventId) throw new TypeError('deriveParentAssertions() requires an event')
     const rows = await participations({ store, event: eventId })
     const children = rows.filter(row => row.role === NV.child).map(row => row.agent)
-    const parents = rows.filter(row => row.role === NV.parent).map(row => row.agent)
+    // nv:mother / nv:father are parent-producing roles too; the sexed role is
+    // how a Birth record states parentage, nv:parent is the generic form.
+    const parents = rows.filter(row => PARENT_ROLES.has(row.role)).map(row => row.agent)
     let confidence = options.confidence
     if (confidence === undefined) {
         confidence = (await eventProvenance({ store, event: eventId })).confidence
@@ -216,6 +228,9 @@ export async function deriveParentAssertions(options = {}) {
                 property: NV.hasParent,
                 value: parent,
                 evidence: eventId,
+                // Findable from the parent's side too: parent.html/timeline ask
+                // "who are <parent>'s children?", which no target query can answer.
+                rel: [child, parent],
                 confidence
             }))
         }
