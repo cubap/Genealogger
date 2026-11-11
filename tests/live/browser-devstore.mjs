@@ -12,7 +12,8 @@
 // network layer, so the browser leg cannot mutate the store even if a page
 // regressed into saving on load. Records are left behind, like the node smoke's.
 //
-// Pages covered: index (list), birth, death, person (hub), parents, tree, timeline.
+// Pages covered: index (list), birth, death, person (hub), label, parents, tree,
+// timeline.
 // Add a leg here when a page lands — it is the only proof that a page reads real
 // devstore data, and it has already caught two browser-only adapter defects that
 // no injected-fake test could see.
@@ -194,6 +195,38 @@ try {
     check('the hub resolved assertions into rows', (await page.locator('#existingAssertions gl-assertion').count()) >= 2)
     const relations = await text('#existingRelations')
     check('the derived parent link is visible on the hub', /Parent: Browser Probe/.test(relations), relations)
+
+    console.log('\nlabel.html?store=rerum (the display name and the cache behind it)')
+    check('the label page loads', (await open(`${origin}/label.html?person=${encodeURIComponent(birth.personId)}&store=rerum`)) === 200)
+    await settle(() => !document.getElementById('personBanner').classList.contains('hidden'))
+    const labelBanner = await text('#personBanner')
+    check('the banner names the person by the one label rule', labelBanner.trim() === 'Naming Browser Probe', labelBanner)
+    check('the cached label is shown', (await text('#currentLabel')) === 'Browser Probe', await text('#currentLabel'))
+    // The write-side invariant of #31/#42: the cheap list read (deriveLabel) and the
+    // detail read (personLabel) must agree, or this page reports a stale cache. Real
+    // devstore data is the only place both reads come off the same stored document.
+    check('the cached label and the assembled label agree',
+        await page.$eval('#cacheNote', el => el.classList.contains('hidden')), await text('#cacheNote'))
+    check('the form is prefilled with the current display name',
+        (await inputValue('#labelForm input[deer-key="name"]')) === 'Browser Probe',
+        await inputValue('#labelForm input[deer-key="name"]'))
+    const nameRows = await page.$$eval('#existingNames gl-assertion',
+        els => els.map(el => ({ value: el.row && el.row.value, evidence: el.row && el.row.evidenceLabel })))
+    // saveBirth evidences the full-name annotation with the Birth Event and the
+    // name-part annotations with the source Record, so a row may legitimately cite
+    // either. What must never leak through is a raw id: that is the bug #42 fixed,
+    // and real devstore data is the only place both evidence shapes coexist.
+    check('every name claim cites a source, by name and not by id',
+        nameRows.length > 0 && nameRows.every(row => row.evidence && !/^https?:/.test(String(row.evidence))),
+        JSON.stringify(nameRows))
+    check('a name claim cites the Record the birth was saved with',
+        nameRows.some(row => String(row.evidence).includes(`browser smoke birth ${stamp}`)),
+        JSON.stringify(nameRows))
+    // The hub's "Label" button and this page's "View profile" link are the only
+    // route into the page; if either stops carrying the id the page is unreachable.
+    check('the label page links back to the hub with the same id',
+        (await page.$eval('#profileLink', el => el.getAttribute('href'))).endsWith(`#${birth.personId}`),
+        await page.$eval('#profileLink', el => el.getAttribute('href')))
 
     console.log('\nparents.html?store=rerum (parentage derived from an event)')
     check('the parents page loads', (await open(`${origin}/parents.html?person=${encodeURIComponent(death.personId)}&store=rerum`)) === 200)
