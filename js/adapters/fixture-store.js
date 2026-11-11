@@ -2,12 +2,12 @@
  * @module adapters/fixture-store
  * @description MemoryStore seeded from a plain JSON array of entities and
  * annotations. Use for demos (and storybooks-style examples) without a
- * network. See js/adapters/fixtures/sample-family.json for the shipped fixture.
+ * network. See js/adapters/fixtures/sample-family.js for the shipped fixture.
  */
 
 import { MemoryStore } from './memory-store.js'
 import { assertStore } from './store.js'
-import sampleFamily from './fixtures/sample-family.json'
+import sampleFamily from './fixtures/sample-family.js'
 
 export class FixtureStore extends MemoryStore {
     /**
