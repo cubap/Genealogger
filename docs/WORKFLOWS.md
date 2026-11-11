@@ -369,9 +369,9 @@ Unit tests: `tests/unit/model-lacuna.test.js`, and the end-to-end gap story in
 
 ## 11. Migrate a DEER v1 record without a migration script
 
-Every read path *also* works on old records, and the first save converts them
-lazily. Nothing bulk-rewrites storage, and a page never has to ask which shape
-it got:
+Every read path *also* works on old records, and a save re-asserts the facts in
+the new shape instead of editing the old ones. Nothing bulk-rewrites storage, and
+a page never has to ask which shape it got:
 
 1. `convertLegacyEntity()` (in `js/adapters/legacy.js`) presents a v1 document
    in the vocabulary — `givenName`, `hasFather`, a `#legacy-` annotation — while
@@ -384,9 +384,12 @@ it got:
    where a v1 fact had no source document, its assertion has no `evidence`, and
    the pages render that as an unlabeled row rather than a fabricated citation.
 3. Reads flag it: every assembled view returns `legacy: true` (or a
-   `legacyAnnotation` count), which renders the migrated read-only state.
-4. The first save writes the new shape (story 6). The old annotation stays
-   until its owning page's lazy migration replaces it.
+   `legacyAnnotation` count), which renders the banner and the inherited rows as
+   read-only.
+4. The first save writes the new shape (story 6) **alongside** the old documents:
+   the v1 annotation stays, and its rows keep rendering next to the new ones, so a
+   migrated record visibly shows both claims until the v1 documents themselves are
+   retired. That duplication is the price of never rewriting shared data.
 5. Because v1 mints **no `rel` at all**, a v1 person's events are invisible to
    the `rel` lookup. `search.eventsForPerson({ personId, role, legacyTypes })`
    falls back to `search.eventsWithoutIndex()` — `listByType()` per token plus a

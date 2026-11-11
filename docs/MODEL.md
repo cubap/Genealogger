@@ -272,6 +272,8 @@ reads at render time. A derived view is a *read*, so it can never go stale
 relative to the annotations behind it — and it cannot be edited, which is why
 the tree and timeline are display surfaces, not forms.
 
+Why accept the read cost instead of storing the relationships: [ADR 0002](adr/0002-assembled-views-with-one-index.md).
+
 ## 10. Lacunae
 
 An absent fact is ambiguous: not recorded, or recorded as unknown? `nv:Lacuna`
@@ -515,9 +517,10 @@ shapes. Reads convert them lazily:
 
 - `js/adapters/legacy.js` converts a v1 document into the new shape at
   **read** time. Nothing is rewritten on sight; opening a page writes nothing.
-- The first save through the new stack migrates the records that save touches,
-  and only those. Assembled views carry `legacy: true` so a page can show a
-  "migrated view" banner and stay read-only until the user edits.
+- A save never PUTs a v1 fact document: it writes new-shape Event, Annotation and
+  Record documents alongside. A page keeps showing its "legacy" banner for as long
+  as any v1 annotation backs a row, so the banner is honest about where each row
+  came from rather than claiming a rewrite that never happened.
 - v1 minted no `rel` reverse index, so `eventsForPerson({ legacyTypes })`
   falls back to a bounded enumeration (`listByType()` + per-event `target`
   queries) *only when the index returns nothing*. New-shape reads stay
@@ -530,7 +533,8 @@ shapes. Reads convert them lazily:
 Why not migrate everything in one batch: the shared sandbox holds documents no
 script here should rewrite, and an unreviewed bulk PUT against a versioning
 store mints a new `@id` per document, orphaning every annotation that targeted
-the old one. Rationale in `docs/adr/` (lazy migration).
+the old one. The decision is recorded in
+[ADR 0003](adr/0003-lazy-read-time-migration.md).
 
 ## 16. Storing data
 

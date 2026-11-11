@@ -109,7 +109,7 @@ Genealogger/
 │       ├── memory-store.js   #   tests
 │       ├── fixture-store.js  #   demo family
 │       └── legacy.js         #   read-only DEER v1 shape conversion
-├── docs/                     # MODEL.md, API.md, WORKFLOWS.md, adr/, page-model-adapter.md
+├── docs/                     # MODEL.md, API.md, WORKFLOWS.md, adr/, agents/, contracts
 ├── schemas/
 │   └── genealogger-context.jsonld  # normative JSON-LD context for nv: + reuse
 ├── nv/index.html             # the nv: namespace URL, rendered from the context
@@ -136,6 +136,7 @@ Layers point one way: `pages → model → adapters`. A page never fetches or wr
 | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) | each user journey as the model calls behind it |
 | [docs/page-model-adapter.md](docs/page-model-adapter.md) | the page → model → adapter wiring contract |
 | [docs/devstore-query-contract.md](docs/devstore-query-contract.md) | what the RERUM query endpoint can and cannot answer |
+| [docs/adr/](docs/adr/) | the standing decisions: mirrored DEER v2 shapes (0001), assembled views and the one index (0002), lazy migration (0003) |
 | [nv/](nv/index.html) | the `nv:` namespace, rendered from the normative JSON-LD context |
 
 ## API Documentation
@@ -186,7 +187,7 @@ Nothing above is derived-and-stored twice: the person document has no `birthDate
 
 ```bash
 npm test                        # everything vitest is configured for
-npx vitest run tests/unit       # 24 files
+npx vitest run tests/unit       # 25 files / 290 tests
 ```
 
 Unit tests cover the model layer and the components' collection/dispatch surface against an injected fake store — no network, no fixtures leaking into assertions about behaviour.
@@ -197,7 +198,7 @@ Unit tests cover the model layer and the components' collection/dispatch surface
 npx playwright test --project=chromium --workers=1
 ```
 
-Journeys drive real pages against `?store=local`, so they seed families through the forms and assert on what a researcher sees.
+Journeys drive real pages against `?store=local`, so they seed families through the forms and assert on what a researcher sees. `playwright.config.js` derives a stable port per checkout (`GL_PORT` overrides it) rather than defaulting to 8080, because parallel worktrees on one machine used to test whichever sibling's `http-server` grabbed 8080 first.
 
 ### Live smoke
 
