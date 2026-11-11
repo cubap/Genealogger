@@ -49,6 +49,8 @@ export const NV = {
     role: term('nv', 'role'),
     child: term('nv', 'child'),
     parent: term('nv', 'parent'),
+    mother: term('nv', 'mother'),
+    father: term('nv', 'father'),
     godParent: term('nv', 'godParent'),
     informant: term('nv', 'informant')
 }
@@ -74,6 +76,8 @@ export const EVENT_SUBTYPES = {
 export const CANONICAL_ROLES = {
     child: NV.child,
     parent: NV.parent,
+    mother: NV.mother,
+    father: NV.father,
     godParent: NV.godParent,
     informant: NV.informant
 }

@@ -7,12 +7,19 @@
  * CONFIG change only (see below), no caller edit.
  *
  * Config-gating (constraint: writes target devstore; production stays a switch):
- *   - `writeBase` defaults to config.URLS.BASE_URI (devstore today).
+ *   - `writeBase`/`queryBase` default to config.URLS.API_BASE, the RERUM
+ *     write/query service (tinydev today). It is NOT the same host as the
+ *     document host: devstore serves GETs, tinydev serves create/query/update.
  *   - `readBases` default to config.READ_BASE_URIS (devstore today; production
  *     id bases are added to that list to widen reads without touching callers).
  *   - `idBases` from config.ID_BASES tell this adapter which ids are "ours" so
  *     a foreign id is read verbatim instead of rewritten.
  * Nothing here hardcodes a host; every base flows from model config.
+ *
+ * Versioning: RERUM mints the '@id' on create (a client-sent '@id' is ignored)
+ * and an update produces a NEW '@id' with the previous version linked via
+ * `__rerum.history`. Callers must therefore always use the '@id' on the object
+ * returned by create()/update(), never one they guessed up front.
  *
  * Lazy migration (constraint: legacy devstore records open read-only, editing
  * writes the new shape): every document that comes back over the wire is run
@@ -28,7 +35,7 @@
  */
 
 import config from '../model/config.js'
-import { assertStore } from './store.js'
+import { assertStore, relOf } from './store.js'
 import { convertLegacyEntity, convertLegacyAnnotation } from './legacy.js'
 
 const clone = doc => JSON.parse(JSON.stringify(doc))
@@ -50,18 +57,43 @@ function valueObjectsOf(body, property) {
     return Array.isArray(raw) ? raw : [raw]
 }
 
+/** Annotations matching a QueryFilter's clauses (AND semantics). */
+function matchesFilter(anno, filter) {
+    if (filter.rel !== undefined && !relOf(anno).includes(filter.rel)) return false
+    if (filter.type !== undefined && valueObjectsOf(anno.body, filter.type).length === 0) return false
+    if (filter.value !== undefined) {
+        const keys = filter.type !== undefined ? [filter.type] : Object.keys(anno.body || {})
+        return keys.some(key => valueObjectsOf(anno.body, key).some(vo => vo && vo.value === filter.value))
+    }
+    return true
+}
+
+/** Normalize a filter's rel clause to an array (devstore matches array members). */
+function relValues(filter) {
+    return Array.isArray(filter.rel) ? filter.rel : [filter.rel]
+}
+
+/** Keys a DEER v1 document can carry as plumbing rather than as asserted facts. */
+const PLUMBING_KEYS = ['@id', '@type', '@context', '@graph', '__rerum', 'label', 'name', 'evidence']
+
 /**
  * Run one raw store document through the legacy reader into new-shape
  * documents. Returns an array because a legacy entity fans out into a bare
  * entity plus one annotation per asserted fact. Documents already in the new
  * shape pass through unchanged (single-element array).
+ *
+ * Detection is STRUCTURAL, never "has __rerum": devstore stamps `__rerum`
+ * versioning metadata on every document it serves, new shape included, so the
+ * metadata says nothing about shape. (An earlier cut keyed off `__rerum` and
+ * exploded every real annotation into `#legacy-*` pseudo-facts on read.) A
+ * non-annotation document is legacy when it carries facts directly on itself.
  * @param {Object} raw a document straight from the store
  * @returns {Array<Object>} new-shape document(s)
  */
 function migrate(raw) {
     if (!raw || typeof raw !== 'object') return []
-    const isLegacyEntity = Boolean(raw['__rerum']) || (raw['@id'] && !isAnnotation(raw) &&
-        Object.keys(raw).some(key => !['@id', '@type', '@context', '@graph', '__rerum', 'label', 'name', 'evidence'].includes(key)))
+    const isLegacyEntity = !isAnnotation(raw) && Boolean(raw['@id']) &&
+        Object.keys(raw).some(key => !PLUMBING_KEYS.includes(key))
     const isLegacyAnnotation = isAnnotation(raw) && raw.body && (
         Object.values(raw.body).some(entry => entry && typeof entry === 'object' && !('value' in entry) && Object.keys(entry).some(k => !['value', 'source', 'evidence', 'https://cubap.github.io/Genealogger/nv#confidence'].includes(k)))
     )
@@ -83,6 +115,7 @@ function toModelShape(doc) {
         const anno = { '@id': doc['@id'], type: type || 'Annotation', target, body }
         if (doc.motivation) anno.motivation = doc.motivation
         if (doc.creator) anno.creator = doc.creator
+        if (doc.rel !== undefined) anno.rel = clone(doc.rel)
         if (doc['http://purl.org/dc/terms/source']) anno['http://purl.org/dc/terms/source'] = doc['http://purl.org/dc/terms/source']
         return anno
     }
@@ -96,16 +129,16 @@ export class RerumStore {
     /**
      * @param {Object} [options]
      * @param {Function} [options.fetchImpl] fetch-compatible fn (global fetch by default)
-     * @param {string} [options.writeBase] POST base for create/update; config by default
+     * @param {string} [options.writeBase] POST/PUT base for create/update; config URLS.API_BASE by default
      * @param {Array<string>} [options.readBases] GET bases; config READ_BASE_URIS by default
-     * @param {string} [options.queryBase] POST base for query/listByType; config by default
+     * @param {string} [options.queryBase] POST base for query/listByType; config URLS.API_BASE by default
      */
     constructor(options = {}) {
         const {
             fetchImpl = globalThis.fetch,
-            writeBase = config.URLS.BASE_URI,
+            writeBase = config.URLS.API_BASE,
             readBases = config.URLS.READ_BASE_URIS,
-            queryBase = config.URLS.BASE_URI
+            queryBase = config.URLS.API_BASE
         } = options
         if (typeof fetchImpl !== 'function') {
             throw new TypeError('RerumStore requires a fetch implementation (inject fetchImpl in tests)')
@@ -215,14 +248,23 @@ export class RerumStore {
     }
 
     /**
-     * Replace a stored document by '@id' (creates a new RERUM version).
+     * Supersede a stored document with a new version. RERUM answers PUT /update
+     * (document in the body, no id in the path) with the NEW version under a
+     * freshly minted '@id'; the previous version links forward via
+     * `__rerum.history.next`, which is why reads filter on an empty next.
      * @param {Object} doc must carry an existing '@id'
-     * @returns {Promise<Object>} stored copy
+     * @returns {Promise<Object>} the new-version document
      */
     async update(doc) {
         if (!doc || !doc['@id']) throw new Error('update() requires an @id')
-        const updated = await this._post(`${this.writeBase}/update/${doc['@id']}`, clone(doc))
-        if (!updated) throw new Error(`update() failed for ${doc['@id']}`)
+        const res = await this.fetch(`${this.writeBase}/update`, {
+            method: 'PUT',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(doc)
+        })
+        if (!res || !res.ok) throw new Error(`update() failed for ${doc['@id']}`)
+        const updated = await res.json()
         if (this._cache) this._cache.clear()
         return updated
     }
@@ -265,43 +307,50 @@ export class RerumStore {
     }
 
     /**
-     * Annotations matching target/type/value (AND semantics), migrated to the
-     * new shape. Filtered client-side after fetching the target's annotations,
-     * mirroring the memory adapter exactly so the model sees identical results.
-     * @param {{target?: string, type?: string, value?: *}} [filter]
+     * Annotations matching target/rel/type/value.
+     *
+     * Only `target` and `rel` can be resolved by the server, because devstore
+     * filters with dot-notation and EVERY path segment containing a '.' is
+     * unreachable — verified live: `body.https://schema.org/x.value` returns 0
+     * rows while `body.note.value` and top-level `rel` return the documents.
+     * So a body property URI (always a dotted URL) cannot be queried
+     * server-side; `type`/`value` are applied client-side after a `target` or
+     * `rel` fetch. A query with neither is a full-collection scan, which is
+     * never acceptable against a shared store, and throws instead of silently
+     * returning a truncated or empty set.
+     * @param {{target?: string, rel?: string, type?: string, value?: *}} [filter]
      * @returns {Promise<Array<Object>>}
      */
     async query(filter = {}) {
         if (filter.target) {
             const annotations = await this._annotationsFor(filter.target)
-            return annotations.filter(anno => {
-                if (filter.type !== undefined && valueObjectsOf(anno.body, filter.type).length === 0) return false
-                if (filter.value !== undefined) {
-                    const keys = filter.type !== undefined ? [filter.type] : Object.keys(anno.body || {})
-                    const hit = keys.some(key => valueObjectsOf(anno.body, key).some(vo => vo && vo.value === filter.value))
-                    if (!hit) return false
+            return annotations.filter(anno => matchesFilter(anno, filter)).map(clone)
+        }
+        if (filter.rel !== undefined) {
+            const out = []
+            const seen = new Set()
+            for (const value of relValues(filter)) {
+                const rows = await this._post(`${this.queryBase}/query`, {
+                    type: 'Annotation',
+                    rel: value,
+                    '__rerum.history.next': { $exists: true, $size: 0 }
+                })
+                for (const raw of Array.isArray(rows) ? rows : []) {
+                    for (const doc of migrate(raw)) {
+                        if (!isAnnotation(doc) || !doc['@id'] || seen.has(doc['@id'])) continue
+                        const anno = toModelShape(doc)
+                        if (!matchesFilter(anno, filter)) continue
+                        seen.add(doc['@id'])
+                        out.push(clone(anno))
+                    }
                 }
-                return true
-            }).map(clone)
-        }
-        // No target: fall back to a value-only scan for participations across
-        // events (eventsForPerson). Query annotations whose body names the value.
-        const rows = await this._post(`${this.queryBase}/query`, {
-            type: 'Annotation',
-            '__rerum.history.next': { $exists: true, $size: 0 }
-        })
-        const out = []
-        for (const raw of Array.isArray(rows) ? rows : []) {
-            for (const doc of migrate(raw)) {
-                if (!isAnnotation(doc)) continue
-                const anno = toModelShape(doc)
-                if (filter.type !== undefined && valueObjectsOf(anno.body, filter.type).length === 0) continue
-                const keys = filter.type !== undefined ? [filter.type] : Object.keys(anno.body || {})
-                if (filter.value !== undefined && !keys.some(key => valueObjectsOf(anno.body, key).some(vo => vo && vo.value === filter.value))) continue
-                out.push(clone(anno))
             }
+            return out
         }
-        return out
+        throw new Error(
+            'RerumStore.query() requires a target or a rel: devstore can only filter dot-free ' +
+            'top-level paths, so a body-property search would mean scanning every annotation in the store.'
+        )
     }
 }
 

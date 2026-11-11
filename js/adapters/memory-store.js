@@ -7,7 +7,7 @@
  */
 
 import config from '../model/config.js'
-import { assertStore } from './store.js'
+import { assertStore, relOf } from './store.js'
 
 const clone = doc => JSON.parse(JSON.stringify(doc))
 
@@ -109,8 +109,9 @@ export class MemoryStore {
 
     /**
      * Annotations matching all provided filters (AND semantics).
-     * @param {{target?: string, type?: string, value?: *}} [filter]
-     * `type` is a property URI that must key some body ValueObject.
+     * @param {{target?: string, rel?: string, type?: string, value?: *}} [filter]
+     * `type` is a property URI that must key some body ValueObject. `rel` is an
+     * id carried by the annotation's top-level `rel` reverse index.
      * @returns {Array<Object>}
      */
     query(filter = {}) {
@@ -118,6 +119,7 @@ export class MemoryStore {
         for (const doc of this.documents.values()) {
             if (!isAnnotation(doc)) continue
             if (filter.target !== undefined && doc.target !== filter.target) continue
+            if (filter.rel !== undefined && !relOf(doc).includes(filter.rel)) continue
             if (filter.type !== undefined && valueObjectsOf(doc.body, filter.type).length === 0) continue
             if (filter.value !== undefined) {
                 const matching = filter.type !== undefined

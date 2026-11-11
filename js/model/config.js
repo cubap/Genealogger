@@ -23,8 +23,17 @@ function uuid() {
 
 export const config = {
     URLS: {
+        // Documents are READ from this host: GET <BASE_URI>/id/<hex> -> the doc.
+        // Verified live against devstore.
         BASE_URI: 'https://devstore.rerum.io/v1',
-        READ_BASE_URIS: ['https://devstore.rerum.io/v1']
+        READ_BASE_URIS: ['https://devstore.rerum.io/v1'],
+        // Documents are WRITTEN and QUERIED through a different service. Verified
+        // live: POST <API_BASE>/create -> 201 + stored doc with a server-minted
+        // '@id' under BASE_URI/id/; POST <API_BASE>/query -> array of current
+        // versions; PUT <API_BASE>/update (doc in the body, no id in the path)
+        // -> 200 + the NEW version under a fresh '@id'. (BASE_URI/create is a 404.)
+        // Production RERUM is a second API_BASE + BASE_URI pair; no caller changes.
+        API_BASE: 'https://tinydev.rerum.io'
     },
     // Write ids are minted here so shapes match devstore documents today.
     ID_BASE: 'https://devstore.rerum.io/v1/id/',

@@ -69,7 +69,7 @@ export async function personsByAnnotationType(options = {}) {
 export async function eventsForPerson(options = {}) {
     const { store = getDefaultStore(), personId, role } = options
     if (!personId) throw new TypeError('eventsForPerson() requires a personId')
-    const annos = await store.query({ type: NV.participant, value: personId })
+    const annos = await store.query({ rel: personId, type: NV.participant })
     const eventIds = [...new Set(annos
         .filter(anno => role === undefined || valueObjectsFor(anno, NV.role).some(vo => vo.value === role))
         .map(anno => anno.target))]
@@ -95,8 +95,10 @@ export async function parentsOf(options = {}) {
 }
 
 /**
- * Derived children of a person: the COMPUTED inverse of nv:hasParent. Never
- * stored anywhere.
+ * Derived children of a person: the COMPUTED inverse of nv:hasParent. The
+ * parent->child edge is never stored as its own document; it is recovered from
+ * the `rel` reverse index the hasParent assertion carries (the assertion
+ * targets the child, so `target` alone cannot answer this question).
  * @param {Object} [options]
  * @param {Object} [options.store]
  * @param {string} options.personId
@@ -106,7 +108,7 @@ export async function parentsOf(options = {}) {
 export async function childrenOf(options = {}) {
     const { store = getDefaultStore(), personId } = options
     if (!personId) throw new TypeError('childrenOf() requires a personId')
-    const annos = await store.query({ type: NV.hasParent, value: personId })
+    const annos = await store.query({ rel: personId, type: NV.hasParent })
     const rows = []
     for (const anno of annos) {
         for (const vo of valueObjectsFor(anno, NV.hasParent)) {
