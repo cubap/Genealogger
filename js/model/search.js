@@ -185,25 +185,63 @@ function rawText(value) {
     return ''
 }
 
+/**
+ * Text of an assertion entry, which `resolve()` returns as a lone ValueObject
+ * or as an array of coexisting ones. Display shows ONE: a label cannot be two
+ * values at once. Pages that present the fact itself must render every
+ * ValueObject with its provenance instead of calling this.
+ */
+function firstText(value) {
+    if (Array.isArray(value)) return rawText(value[0])
+    return rawText(value)
+}
+
 /** Bare DEER v1 keys still present on migrated identity data. */
 const LEGACY_NAME_KEYS = ['givenName', 'additionalName', 'familyName']
 
+/** Name parts, in display order. Assertions win over bare entity properties. */
+const NAME_PART_PROPERTIES = [SCHEMA.givenName, SCHEMA.additionalName, SCHEMA.familyName]
+
 /**
- * The cheap list label of a bare Person, DERIVED at read time from identity data
- * only (issue #14 story 1, #12 story 13). Preference order:
- *   1. `label` (what createPerson stores and the legacy reader copies from `name`)
- *   2. `name`
- *   3. name parts, schema.org URIs first then the bare v1 keys
- *   4. UNLABELED
- * @param {Object} entity a bare Person entity (any identity shape)
+ * THE one label rule for a Person (issue #14). Every surface that has to name a
+ * person -- the index, a chip, the person page, the label form -- goes through
+ * here, so a person cannot be called one thing in a list and another thing on
+ * its own page.
+ *
+ * Preference order:
+ *   1. `label` -- what createPerson stores, and what the legacy reader copies
+ *      from v1 `name`. A stored summary wins because it is what a previous
+ *      write decided to call this person.
+ *   2. `name`, bare on the entity or asserted under the schema.org URI
+ *   3. name parts (given, additional, family) -- asserted first, then bare
+ *      identity properties, then the unmapped v1 bare keys
+ *   4. UNLABELED, so absence is visible instead of blank
+ *
+ * Conflicting assertions are NOT merged or ranked against each other here; the
+ * first readable value is used for display, and pages that show the fact itself
+ * must render every coexisting ValueObject with its provenance.
+ *
+ * WRITE-SIDE INVARIANT: because the list read cannot afford annotations, the
+ * bare `label` is a denormalized cache of the name. Anything that asserts a new
+ * name must update that cache too, or accept that lists show the old one. This
+ * is also why the bare label outranks an assertion here -- there is no
+ * third option that keeps a list cheap.
+ *
+ * @param {Object} [options]
+ * @param {Object} options.entity bare Person entity (any identity shape)
+ * @param {Object} [options.assertions] resolved assertion map, as returned by
+ *   `assertions.resolve()` -- omit it for the cheap list read, which then sees
+ *   identity data only and costs no extra query
  * @returns {string} display label; never throws on odd input
  */
-export function deriveLabel(entity) {
+export function personLabel(options = {}) {
+    const { entity, assertions } = options
     if (!entity || typeof entity !== 'object') return UNLABELED
-    const direct = rawText(entity.label) || rawText(entity.name)
+    const direct = rawText(entity.label) || firstText(assertions?.label)
+        || rawText(entity.name) || firstText(assertions?.[SCHEMA.name])
     if (direct) return direct
-    const parts = [SCHEMA.givenName, SCHEMA.additionalName, SCHEMA.familyName]
-        .map(property => rawText(entity[property]))
+    const parts = NAME_PART_PROPERTIES
+        .map(property => firstText(assertions?.[property]) || rawText(entity[property]))
         .filter(Boolean)
     if (!parts.length) {
         for (const key of LEGACY_NAME_KEYS) {
@@ -212,6 +250,17 @@ export function deriveLabel(entity) {
         }
     }
     return parts.join(' ').trim() || UNLABELED
+}
+
+/**
+ * The cheap list label of a bare Person: `personLabel()` with no assertions,
+ * i.e. identity data only (issue #14 story 1, #12 story 13). A list row must
+ * never resolve an annotation.
+ * @param {Object} entity a bare Person entity (any identity shape)
+ * @returns {string} display label; never throws on odd input
+ */
+export function deriveLabel(entity) {
+    return personLabel({ entity })
 }
 
 /**
