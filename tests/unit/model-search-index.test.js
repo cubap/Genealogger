@@ -139,6 +139,24 @@ describe('listPersons', () => {
         expect(counted.calls).toEqual({ listByType: 1, query: 0, read: 0 })
     })
 
+    test('works against a store as strict as live devstore', async () => {
+        // docs/devstore-query-contract.md: RerumStore.query() THROWS without a
+        // target or a rel, because devstore cannot filter a dotted body path.
+        // The index is held to more than that: it filters the bounded identity
+        // read client-side, so it must not query or read per row AT ALL (story 1).
+        // This fake therefore refuses every query()/read(), which is stricter
+        // than the server and fails loudly if a future edit reaches for either.
+        const strict = {
+            listByType: () => [person('ada', { label: 'Ada Gordon' }), person('anne', { label: 'Anne Milbanke' })],
+            query: () => { throw new TypeError('query() requires a target or a rel') },
+            read: () => { throw new Error('the list must not read entities') }
+        }
+
+        await expect(listPersons({ store: strict })).resolves.toHaveLength(2)
+        await expect(listPersons({ store: strict, query: 'gordon' })).resolves.toHaveLength(1)
+        await expect(listPersons({ store: strict, query: 'nobody' })).resolves.toHaveLength(0)
+    })
+
     test('returns id + derived label + the bare entity per row', async () => {
         const store = createMemoryStore()
         const created = store.create(person('ada', { label: 'Ada Gordon' }))
