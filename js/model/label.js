@@ -52,7 +52,7 @@ import { TYPES } from './vocabulary.js'
 import { LABEL_PROPERTY, FULL_NAME_PROPERTY, createEntity, readEntity } from './entities.js'
 import { assert as assertAnnotation, list as listAssertions } from './assertions.js'
 import { getPerson } from './person.js'
-import { personLabel, deriveLabel } from './search.js'
+import { personLabel, deriveLabel, UNLABELED } from './search.js'
 import { getDefaultStore } from './default-store.js'
 
 /** Human labels for the name claims this page audits. */
@@ -84,7 +84,13 @@ async function resolveLabels(store, ids) {
     for (const id of new Set(ids.filter(Boolean))) {
         if (labels[id]) continue
         const entity = await readEntity({ store, id })
-        labels[id] = (entity && entity.label) || id
+        // One label rule for the whole app (#31), same as the birth/death pages:
+        // a Record's title may live in `label`, a bare v1 `name`, or the name-part
+        // properties. The id is kept as the fallback where a list would show
+        // `[ unlabeled ]`: these strings label audit rows and evidence pickers,
+        // where an id is at least selectable.
+        const label = entity ? deriveLabel(entity) : UNLABELED
+        labels[id] = label === UNLABELED ? id : label
     }
     return labels
 }

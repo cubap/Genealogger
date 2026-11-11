@@ -254,6 +254,38 @@ describe('loadLabel', () => {
         expect(repaired.evidenceLabels['https://example.org/record']).toBe('Parish register')
     })
 
+    test('names an evidence Record by the one label rule, not only by its bare `label`', async () => {
+        // An evidence document can reach the page from anywhere — a v1 import read
+        // without migration, a Record another agent wrote. The audit row must call it
+        // what every other surface calls it, so the alias goes through deriveLabel().
+        const store = createMemoryStore()
+        const person = await createPerson({ store, label: 'Ada Byron' })
+        const records = await Promise.all([
+            store.create({ '@type': TYPES.Record, label: 'By label' }),
+            store.create({ '@type': TYPES.Record, name: 'By bare v1 name' }),
+            store.create({ '@type': TYPES.Record, [SCHEMA.givenName]: 'Parish', [SCHEMA.familyName]: 'register' }),
+            store.create({ '@type': TYPES.Record })
+        ])
+        const titles = ['By label', 'By bare v1 name', 'Parish register']
+        for (const [index, record] of records.entries()) {
+            await store.create({
+                type: 'Annotation',
+                target: person['@id'],
+                body: { [FULL_NAME_PROPERTY]: { value: `Name ${index}`, evidence: record['@id'] } },
+                [DCTERMS_SOURCE]: record['@id']
+            })
+        }
+
+        const loaded = await loadLabel({ store, personId: person['@id'] })
+        expect(loaded.evidenceLabels[records[0]['@id']]).toBe('By label')
+        expect(loaded.evidenceLabels[records[1]['@id']]).toBe('By bare v1 name')
+        expect(loaded.evidenceLabels[records[2]['@id']]).toBe('Parish register')
+        // Nothing displayable: the id stands in, because an audit row needs some text.
+        expect(loaded.evidenceLabels[records[3]['@id']]).toBe(records[3]['@id'])
+        // The row strings come from the documents, not from the claims they evidence.
+        expect(Object.values(loaded.evidenceLabels).slice(0, 3)).toEqual(titles)
+    })
+
     test('audits the full-name claims and the creating label claim', async () => {
         const { store, personId } = await seedPerson('Ada Byron')
         const created = await loadLabel({ store, personId })
